@@ -5,6 +5,9 @@
   "description": "Customer-facing demo: integrating Stream Video with Angular (proctored exam calls)",
   "scripts": {
     "setup": "npm --prefix setup install && npm --prefix setup run setup",
-    "start": "npm --prefix app start"
+    "start": "npm --prefix app start",
+    "build": "npm --prefix app run build",
+    "test": "npm --prefix app test -- --watch=false",
+    "verify": "npm --prefix setup run verify"
   }
 }

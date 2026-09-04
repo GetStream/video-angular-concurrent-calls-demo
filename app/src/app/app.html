@@ -1,0 +1,15 @@
+@if (fatal(); as error) {
+  <div class="fatal">
+    <mat-icon class="fatal__icon">error_outline</mat-icon>
+    <h1 class="fatal__title">{{ error.what }} failed</h1>
+    <p class="fatal__message">{{ error.message }}</p>
+    <div class="fatal__actions">
+      @if (error.retry) {
+        <button matButton="filled" type="button" (click)="retry()">Try again</button>
+      }
+      <button matButton type="button" (click)="dismiss()">Dismiss</button>
+    </div>
+  </div>
+} @else {
+  <router-outlet />
+}

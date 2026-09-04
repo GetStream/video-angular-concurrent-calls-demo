@@ -1,0 +1,23 @@
+<main class="skeleton">
+  <h1>Video demo</h1>
+  <p class="skeleton__note">
+    Skeleton from step 2 — the user picker arrives in step 3. Config below is read from
+    <code>demo-config.json</code>, which proves runtime config, DI and Material are wired.
+  </p>
+
+  <mat-card class="skeleton__card">
+    <mat-card-content>
+      <p>Cast seeded {{ generatedAt() }}</p>
+      <p><strong>{{ proctors().length }}</strong> proctors:
+        @for (p of proctors(); track p.id) {
+          <span class="chip">{{ initials(p.name) }} {{ p.id }}</span>
+        }
+      </p>
+      <p><strong>{{ students().length }}</strong> students:
+        @for (s of students(); track s.id) {
+          <span class="chip">{{ initials(s.name) }} {{ s.id }}</span>
+        }
+      </p>
+    </mat-card-content>
+  </mat-card>
+</main>

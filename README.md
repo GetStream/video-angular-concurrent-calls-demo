@@ -21,16 +21,23 @@ Built in steps. Right now:
 | Step | State |
 |---|---|
 | 1. Server-side setup script | **Done** — runs and verifies clean |
-| 2-7. Angular app (lobby, exam call, chat, whisper, extras) | Not started |
+| 2. Angular app skeleton (config, services, directives, routing) | **Done** — builds, tests and serves |
+| 3-7. The screens (picker, lobby, exam call, chat, whisper, extras) | Not started |
 
-`npm run setup` works today. `npm start` does **not** yet — `app/` contains only the config the
-setup script generates.
+`npm run setup`, `npm start`, `npm run build` and `npm test` all work. The three routes exist but
+render placeholders — the real screens arrive in steps 3-7.
 
 ---
 
 ## Prerequisites
 
-- **Node.js ≥ 22.12** (the Stream Node SDK requires it). Check with `node -v`.
+- **Node.js 24.20.0** — pinned in `.nvmrc`. Angular CLI 22 requires ≥ 24.15.0 (or ≥ 22.22.3)
+  and refuses to run below that, so with [nvm](https://github.com/nvm-sh/nvm):
+
+  ```bash
+  nvm install   # reads .nvmrc
+  nvm use
+  ```
 - A **Stream app** with Video and Chat enabled, and its **API key + secret** from the
   [dashboard](https://dashboard.getstream.io).
 
@@ -69,7 +76,7 @@ It is **idempotent** — safe to run as often as you like. Existing roles are re
 **3. Check the result.**
 
 ```bash
-npm --prefix setup run verify
+npm run verify
 ```
 
 This reads the live server state back and asserts 27 things: the app-level grants, both call types'
@@ -88,6 +95,24 @@ Seeded users
 
 All checks passed
 ```
+
+---
+
+## Running the app
+
+```bash
+npm start        # dev server on http://localhost:4200
+npm run build    # production build
+npm test         # unit tests (Vitest)
+```
+
+The app reads `public/demo-config.json` at startup through `provideAppInitializer`, so it will not
+render until the setup script has produced it. If you see an error telling you to run
+`npm run setup`, that is why.
+
+Background-filter models (~26 MB) are copied into `app/public/mediapipe/` by a `postinstall` hook,
+so the filters load from your own origin instead of a CDN. That directory is generated and
+gitignored.
 
 ---
 
