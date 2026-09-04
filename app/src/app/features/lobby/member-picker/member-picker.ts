@@ -5,6 +5,8 @@ import {
   inject,
   input,
   model,
+  effect,
+  output,
   resource,
   signal,
 } from '@angular/core';
@@ -54,6 +56,12 @@ export class MemberPicker {
 
   /** Owned by the parent, so "Start exam call" can read the roster. */
   readonly selected = model<string[]>([]);
+  /**
+   * Lets the parent hold its call-to-action until the first page has arrived. Creating a
+   * call while this is still true would silently produce an empty roster - and since no
+   * app-level role grants `join-call`, nobody could then join it.
+   */
+  readonly loadingChange = output<boolean>();
 
   private readonly chat = inject(ChatClient);
 
@@ -103,6 +111,10 @@ export class MemberPicker {
       return users;
     },
   });
+
+  constructor() {
+    effect(() => this.loadingChange.emit(this.results.isLoading()));
+  }
 
   protected readonly selectedSet = computed(() => new Set(this.selected()));
 

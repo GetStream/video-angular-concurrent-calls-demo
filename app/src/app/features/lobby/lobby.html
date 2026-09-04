@@ -54,12 +54,14 @@
           label="proctors"
           [pinned]="user()?.id"
           [(selected)]="proctorIds"
+          (loadingChange)="setProctorsLoading($event)"
         />
         <app-member-picker
           role="student"
           label="students"
           [selectAllInitially]="true"
           [(selected)]="studentIds"
+          (loadingChange)="setStudentsLoading($event)"
         />
 
         <div class="field">
@@ -82,15 +84,15 @@
           matButton="filled"
           type="button"
           class="lobby__cta"
-          [disabled]="starting()"
+          [disabled]="starting() || rostersLoading()"
           (click)="startExam()"
         >
-          @if (starting()) {
+          @if (starting() || rostersLoading()) {
             <mat-spinner diameter="20" />
           } @else {
             <mat-icon iconPositionEnd>arrow_forward</mat-icon>
           }
-          {{ starting() ? 'Creating…' : 'Start exam call' }}
+          {{ starting() ? 'Creating…' : rostersLoading() ? 'Loading the cast…' : 'Start exam call' }}
         </button>
       } @else {
         <div class="field">

@@ -54,8 +54,10 @@ const chat = await c.chat.getChannelType({ name: 'messaging' });
 console.log("\nChat channel type 'messaging'");
 check('proctor has chat grants', (chat.grants?.['proctor']?.length ?? 0) > 0, `${chat.grants?.['proctor']?.length} grants`);
 check('student has chat grants', (chat.grants?.['student']?.length ?? 0) > 0, `${chat.grants?.['student']?.length} grants`);
-check('proctor can read and repair the room', ['read-channel','update-channel-members'].every((c) => chat.grants?.['proctor']?.includes(c)));
+// Neither role gets blanket chat access: reading the room comes from channel membership.
+check('proctor is membership-gated (no blanket read-channel)', !chat.grants?.['proctor']?.includes('read-channel'));
 check('student is membership-gated (no blanket read-channel)', !chat.grants?.['student']?.includes('read-channel'));
+check('both roles can create a channel', ['proctor','student'].every((r) => chat.grants?.[r]?.includes('create-channel')));
 
 const { users } = await c.queryUsers({ payload: { filter_conditions: { role: { $in: ['proctor','student'] } }, limit: 30 } });
 console.log('\nSeeded users');

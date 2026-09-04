@@ -46,10 +46,6 @@ import { ExamChannel } from '../../../core/stream/exam-channel';
 })
 export class ChatPanel implements OnInit {
   readonly callId = input.required<string>();
-  /** Proctors create and repair the room; students only ever read it. */
-  readonly canManage = input(false);
-  /** The call's roster, so channel membership can mirror it exactly. */
-  readonly memberIds = input<string[]>([]);
 
   private readonly examChannel = inject(ExamChannel);
   private readonly channelService = inject(ChannelService);
@@ -83,13 +79,6 @@ export class ChatPanel implements OnInit {
   protected async open(): Promise<void> {
     this.problem.set('none');
     this.ready.set(false);
-
-    // A proctor guarantees the room exists with the call's roster before reading it. Doing
-    // this on every entry - not only at creation - repairs a call that predates the chat,
-    // or one whose channel creation failed, instead of leaving it unreadable forever.
-    if (this.canManage()) {
-      await this.examChannel.ensureFor(this.callId(), this.memberIds());
-    }
 
     const result = await this.examChannel.open(this.callId());
     if ('error' in result) {

@@ -25,11 +25,7 @@
       }
 
       @if (chatOpen()) {
-        <app-chat-panel
-          [callId]="callId()"
-          [canManage]="isProctor()"
-          [memberIds]="memberIds()"
-        />
+        <app-chat-panel [callId]="callId()" />
       }
     </div>
 

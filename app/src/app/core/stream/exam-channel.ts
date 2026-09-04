@@ -33,34 +33,22 @@ export class ExamChannel {
   private readonly notifier = inject(Notifier);
 
   /**
-   * Make sure the channel exists with this exact roster. Proctors only - students hold no
-   * capability to create or to manage members, by design.
+   * Create the call's room, with the same roster as the call.
    *
-   * Idempotent, and called both when the call is created and whenever a proctor enters it,
-   * so a call made before the chat existed (or one whose channel creation failed) is
-   * repaired rather than left permanently unreadable.
+   * Called once, immediately after `call.getOrCreate()` - the two get-or-creates sit
+   * together because they describe one thing: an exam and the room that belongs to it.
+   * Nothing else ever creates this channel (see `open`), so there is no second writer to
+   * reconcile against and no repair path to maintain.
    */
-  async ensureFor(callId: string, memberIds: string[]): Promise<boolean> {
+  async createFor(callId: string, memberIds: string[]): Promise<boolean> {
     const channel = this.chat.raw.channel(CHAT_CHANNEL_TYPE, callId, {
       members: memberIds,
       name: `Exam ${callId}`,
     });
-
-    const created = await this.notifier.attempt(() => channel.create(), {
-      what: 'Setting up the exam chat',
+    const result = await this.notifier.attempt(() => channel.create(), {
+      what: 'Creating the exam chat room',
     });
-    if (!created.ok) return false;
-
-    // `create()` is a get-or-create: on an existing channel it does not add members, so
-    // reconcile explicitly. This is what makes a late-added proctor or student able to read.
-    const present = new Set(Object.keys(channel.state.members ?? {}));
-    const missing = memberIds.filter((id) => !present.has(id));
-    if (missing.length) {
-      await this.notifier.attempt(() => channel.addMembers(missing), {
-        what: 'Adding people to the exam chat',
-      });
-    }
-    return true;
+    return result.ok;
   }
 
   /**

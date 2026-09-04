@@ -72,11 +72,6 @@ export class ExamCall implements OnInit {
   /** Open by default: in an exam the room is the only way a student can ask anything. */
   protected readonly chatOpen = signal(true);
 
-  /** The call's roster - the chat channel's membership is kept identical to it. */
-  protected readonly memberIds = computed(
-    () => this.exam()?.members().map((m) => m.user_id) ?? [],
-  );
-
   protected toggleChat(): void {
     this.chatOpen.update((open) => !open);
   }

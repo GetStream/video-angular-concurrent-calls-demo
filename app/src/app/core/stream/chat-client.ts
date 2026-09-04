@@ -27,7 +27,9 @@ export class ChatClient {
   async connect(user: DemoUser): Promise<boolean> {
     const result = await this.notifier.attempt(
       async () => {
-        await this.chatService.init(this.config.apiKey, user.id, user.token);
+        await this.chatService.init(this.config.apiKey, user.id, user.token, {
+          timeout: 15_000,
+        });
         // Without this every label in the stock components renders as "streamChat...".
         this.i18n.setTranslation();
       },

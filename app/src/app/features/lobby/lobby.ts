@@ -77,6 +77,12 @@ export class Lobby {
   protected readonly proctorIds = signal<string[]>([]);
   protected readonly studentIds = signal<string[]>([]);
   protected readonly starting = signal(false);
+  /** Both pickers report their load state, so the CTA can wait for the rosters. */
+  private readonly proctorsLoading = signal(true);
+  private readonly studentsLoading = signal(true);
+  protected readonly rostersLoading = computed(
+    () => this.proctorsLoading() || this.studentsLoading(),
+  );
   protected readonly joining = signal(false);
 
   protected readonly shareLink = computed(
@@ -109,6 +115,14 @@ export class Lobby {
     });
   }
 
+  protected setProctorsLoading(loading: boolean): void {
+    this.proctorsLoading.set(loading);
+  }
+
+  protected setStudentsLoading(loading: boolean): void {
+    this.studentsLoading.set(loading);
+  }
+
   protected selectTab(tab: 'create' | 'join'): void {
     this.tab.set(tab);
   }
@@ -138,7 +152,8 @@ export class Lobby {
    */
   protected async startExam(): Promise<void> {
     const me = this.user();
-    if (!me || this.starting()) return;
+    // Guard as well as disable: an empty roster produces a call nobody can join.
+    if (!me || this.starting() || this.rostersLoading()) return;
 
     this.starting.set(true);
     const callId = this.newCallId();
@@ -163,11 +178,11 @@ export class Lobby {
       return;
     }
 
-    // Same roster as the call: channel membership is what gates reading the room, so a
-    // student on the call but not the channel would be in the exam unable to see chat.
-    await this.examChannel.ensureFor(
+    // The room is created here, right after the call, with the same roster - one intent,
+    // two get-or-creates. Nothing else creates it, so membership can never drift.
+    await this.examChannel.createFor(
       callId,
-      members.map((m) => m.user_id),
+      members.map((member) => member.user_id),
     );
 
     this.starting.set(false);

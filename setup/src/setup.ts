@@ -20,7 +20,6 @@ import { StreamClient } from '@stream-io/node-sdk';
 import { CAST, PROCTORS, STUDENTS } from './cast.ts';
 import {
   appGrantsFrom,
-  CHAT_PROCTOR_EXTRA,
   CUSTOM_ROLES,
   EXAM_GRANTS,
   ROLE,
@@ -211,14 +210,14 @@ async function configureChatGrants(client: StreamClient): Promise<void> {
     automod_behavior: current.automod_behavior,
     max_message_length: current.max_message_length,
     grants: mergeGrants(current.grants ?? {}, {
-      // Proctors moderate the room; students are gated on channel membership, exactly as
-      // the built-in model intends.
-      [ROLE.PROCTOR]: [...new Set([...userGrants, ...CHAT_PROCTOR_EXTRA])],
+      [ROLE.PROCTOR]: [...userGrants],
       [ROLE.STUDENT]: [...userGrants],
     }),
   });
-  done(`${ROLE.STUDENT} → cloned ${userGrants.length} 'user' grants (membership-gated)`);
-  done(`${ROLE.PROCTOR} → those plus ${CHAT_PROCTOR_EXTRA.join(', ')}`);
+  // Both roles get only the `user` baseline. Reading the room comes from being one of its
+  // members (`channel_member` holds `read-channel` and `create-message`), which is the
+  // built-in model and the same rule the call itself uses.
+  done(`${ROLE.PROCTOR} and ${ROLE.STUDENT} → cloned ${userGrants.length} 'user' grants`);
 }
 
 async function seedUsers(client: StreamClient): Promise<void> {
