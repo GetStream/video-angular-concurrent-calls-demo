@@ -22,7 +22,8 @@ Built in steps. Right now:
 |---|---|
 | 1. Server-side setup script | **Done** — runs and verifies clean |
 | 2. Angular app skeleton (config, services, directives, routing) | **Done** — builds, tests and serves |
-| 3-7. The screens (picker, lobby, exam call, chat, whisper, extras) | Not started |
+| 3. User picker | **Done** — connects both Stream clients and routes to the lobby |
+| 4-7. Lobby, exam call, chat, whisper, extras | Not started |
 
 `npm run setup`, `npm start`, `npm run build` and `npm test` all work. The three routes exist but
 render placeholders — the real screens arrive in steps 3-7.
@@ -109,6 +110,10 @@ npm test         # unit tests (Vitest)
 The app reads `public/demo-config.json` at startup through `provideAppInitializer`, so it will not
 render until the setup script has produced it. If you see an error telling you to run
 `npm run setup`, that is why.
+
+Pick any of the 14 seeded users on the first screen — that is the whole identity step. Proctors can
+create exam calls; students can only join one they are a member of. A call link (`?call_id=…`)
+survives the picker, so a student arriving on one is taken straight to it after choosing who to be.
 
 Background-filter models (~26 MB) are copied into `app/public/mediapipe/` by a `postinstall` hook,
 so the filters load from your own origin instead of a CDN. That directory is generated and

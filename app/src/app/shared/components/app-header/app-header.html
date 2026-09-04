@@ -1,0 +1,32 @@
+<header class="chrome">
+  <div class="chrome__brand">
+    <span class="chrome__app">Video demo</span>
+    @if (context()) {
+      <span class="chrome__context">{{ context() }}</span>
+    }
+  </div>
+
+  <div class="chrome__identity">
+    @if (user(); as signedIn) {
+      <span class="chrome__user">
+        <span class="chrome__avatar" aria-hidden="true">{{ initials(signedIn.name) }}</span>
+        <span class="chrome__id">{{ signedIn.id }}</span>
+        <span class="chrome__role">{{ signedIn.role }}</span>
+      </span>
+      <button
+        matIconButton
+        type="button"
+        matTooltip="Sign out"
+        aria-label="Sign out"
+        (click)="signOut()"
+      >
+        <mat-icon>logout</mat-icon>
+      </button>
+    } @else {
+      <span class="chrome__user chrome__user--empty">
+        <mat-icon>person_outline</mat-icon>
+        nobody yet
+      </span>
+    }
+  </div>
+</header>

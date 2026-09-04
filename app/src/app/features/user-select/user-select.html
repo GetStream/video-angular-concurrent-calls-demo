@@ -1,23 +1,89 @@
-<main class="skeleton">
-  <h1>Video demo</h1>
-  <p class="skeleton__note">
-    Skeleton from step 2 — the user picker arrives in step 3. Config below is read from
-    <code>demo-config.json</code>, which proves runtime config, DI and Material are wired.
-  </p>
+<div class="picker">
+  <app-header context="Who are you?" />
 
-  <mat-card class="skeleton__card">
-    <mat-card-content>
-      <p>Cast seeded {{ generatedAt() }}</p>
-      <p><strong>{{ proctors().length }}</strong> proctors:
-        @for (p of proctors(); track p.id) {
-          <span class="chip">{{ initials(p.name) }} {{ p.id }}</span>
+  <main class="picker__panel">
+    <h1 class="picker__title">Pick a user to demo as</h1>
+
+    <section class="group">
+      <div class="group__head">
+        <span class="group__label">proctors</span>
+        <span class="badge badge--primary">CREATE + JOIN</span>
+      </div>
+      <div class="group__grid group__grid--proctors">
+        @for (user of proctors(); track user.id) {
+          <button
+            type="button"
+            class="cast"
+            [class.cast--selected]="isSelected(user)"
+            [attr.aria-pressed]="isSelected(user)"
+            (click)="pick(user)"
+          >
+            <span class="cast__avatar" aria-hidden="true">{{ initials(user.name) }}</span>
+            <span class="cast__text">
+              <span class="cast__id">{{ user.id }}</span>
+              <span class="cast__role">Proctor</span>
+            </span>
+            @if (isSelected(user)) {
+              <mat-icon class="cast__check">check_circle</mat-icon>
+            }
+          </button>
         }
-      </p>
-      <p><strong>{{ students().length }}</strong> students:
-        @for (s of students(); track s.id) {
-          <span class="chip">{{ initials(s.name) }} {{ s.id }}</span>
+      </div>
+    </section>
+
+    <section class="group">
+      <div class="group__head">
+        <span class="group__label">students</span>
+        <span class="badge">JOIN ONLY</span>
+      </div>
+      <div class="group__grid group__grid--students">
+        @for (user of students(); track user.id) {
+          <button
+            type="button"
+            class="cast cast--sm"
+            [class.cast--selected]="isSelected(user)"
+            [attr.aria-pressed]="isSelected(user)"
+            (click)="pick(user)"
+          >
+            <span class="cast__avatar" aria-hidden="true">{{ initials(user.name) }}</span>
+            <span class="cast__text">
+              <span class="cast__id">{{ user.id }}</span>
+              <span class="cast__role">Student</span>
+            </span>
+            @if (isSelected(user)) {
+              <mat-icon class="cast__check">check_circle</mat-icon>
+            }
+          </button>
         }
-      </p>
-    </mat-card-content>
-  </mat-card>
-</main>
+      </div>
+    </section>
+
+    <hr class="picker__rule" />
+
+    <footer class="picker__footer">
+      @if (callId()) {
+        <p class="picker__deeplink">
+          You arrived on a link for call <code>{{ callId() }}</code>, so you'll be taken
+          straight to it.
+        </p>
+      }
+      <button
+        matButton="filled"
+        type="button"
+        class="picker__cta"
+        [disabled]="!selected() || connecting()"
+        (click)="continueAs()"
+      >
+        <!-- The projected icon must be the only root node of its block, or MatButton's
+             iconPositionEnd slot never receives it (NG8011) and the arrow lands in the
+             wrong place. So the label sits at the button root as a sibling. -->
+        @if (connecting()) {
+          <mat-spinner diameter="20" />
+        } @else {
+          <mat-icon iconPositionEnd>arrow_forward</mat-icon>
+        }
+        {{ connecting() ? 'Connecting…' : ctaLabel() }}
+      </button>
+    </footer>
+  </main>
+</div>

@@ -30,10 +30,13 @@ export class VideoClient {
 
     const result = await this.notifier.attempt(
       async () => {
-        const client = StreamVideoClient.getOrCreateInstance({
+        // Constructed WITHOUT `user` on purpose. Passing a user (as getOrCreateInstance
+        // requires) makes the SDK fire-and-forget its own connectUser, so awaiting one
+        // ourselves would be a second connect - the SDK warns "Consecutive calls to
+        // connectUser is detected". Connecting explicitly instead is what lets a bad
+        // token surface here as a fatal error rather than in an unrelated later call.
+        const client = new StreamVideoClient({
           apiKey: this.config.apiKey,
-          user: { id: user.id, name: user.name },
-          token: user.token,
           options: {
             // Timers move to a worker so a backgrounded tab isn't throttled mid-call.
             enableTimerWorker: true,
@@ -46,8 +49,6 @@ export class VideoClient {
             },
           },
         });
-        // Passing `user` auto-connects, but await it explicitly so a bad token surfaces
-        // here as a fatal error rather than as a confusing failure on the next call.
         await client.connectUser({ id: user.id, name: user.name }, user.token);
         return client;
       },

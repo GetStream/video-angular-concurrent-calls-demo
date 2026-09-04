@@ -34,6 +34,18 @@
             ],
             "styles": [
               "src/styles.scss"
+            ],
+            "allowedCommonJsDependencies": [
+              "base64-js",
+              "dayjs",
+              "dayjs/plugin/calendar",
+              "dayjs/plugin/relativeTime",
+              "fix-webm-duration",
+              "form-data",
+              "lodash.deburr",
+              "sdp",
+              "sdp-transform",
+              "ua-parser-js"
             ]
           },
           "configurations": {
@@ -73,7 +85,10 @@
           "defaultConfiguration": "development"
         },
         "test": {
-          "builder": "@angular/build:unit-test"
+          "builder": "@angular/build:unit-test",
+          "options": {
+            "runnerConfig": true
+          }
         }
       }
     }
