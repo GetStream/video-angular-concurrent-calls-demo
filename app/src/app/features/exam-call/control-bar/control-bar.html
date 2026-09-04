@@ -42,6 +42,18 @@
         {{ sharing() ? 'Sharing screen' : 'Share screen' }}
       </button>
     }
+    <button
+      matIconButton
+      type="button"
+      class="ctl"
+      [class.ctl--active]="chatOpen()"
+      [matTooltip]="chatOpen() ? 'Hide chat' : 'Show chat'"
+      [attr.aria-label]="chatOpen() ? 'Hide chat' : 'Show chat'"
+      [attr.aria-pressed]="chatOpen()"
+      (click)="toggleChat.emit()"
+    >
+      <mat-icon>chat_bubble_outline</mat-icon>
+    </button>
   </div>
 
   <div class="bar__end">

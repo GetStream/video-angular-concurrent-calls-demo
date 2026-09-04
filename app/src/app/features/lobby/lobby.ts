@@ -17,6 +17,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import type { MemberRequest } from '@stream-io/video-client';
 import { CurrentUser } from '../../core/auth/current-user';
 import { Notifier } from '../../core/errors/notifier';
+import { ExamChannel } from '../../core/stream/exam-channel';
 import { EXAM_CALL_TYPE, LobbyCall } from '../../core/stream/lobby-call';
 import { AppHeader } from '../../shared/components/app-header/app-header';
 import { DeviceSetup } from './device-setup/device-setup';
@@ -54,6 +55,7 @@ export class Lobby {
 
   private readonly currentUser = inject(CurrentUser);
   private readonly lobbyCall = inject(LobbyCall);
+  private readonly examChannel = inject(ExamChannel);
   private readonly notifier = inject(Notifier);
   private readonly router = inject(Router);
 
@@ -156,9 +158,19 @@ export class Lobby {
       () => call.getOrCreate({ data: { members, custom: { mode: 'exam' } } }),
       { what: 'Creating the exam call', fatal: true, retry: () => void this.startExam() },
     );
-    this.starting.set(false);
-    if (!result.ok) return;
+    if (!result.ok) {
+      this.starting.set(false);
+      return;
+    }
 
+    // Same roster as the call: channel membership is what gates reading the room, so a
+    // student on the call but not the channel would be in the exam unable to see chat.
+    await this.examChannel.ensureFor(
+      callId,
+      members.map((m) => m.user_id),
+    );
+
+    this.starting.set(false);
     await this.router.navigate(['/exam', callId]);
   }
 

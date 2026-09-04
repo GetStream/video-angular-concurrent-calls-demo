@@ -13,6 +13,13 @@
   height: 100vh;
   overflow: hidden;
 
+  /* Layout beside chat: the video side flexes, the panel is a fixed column. */
+  &__body {
+    flex: 1;
+    display: flex;
+    min-height: 0;
+  }
+
   &__joining,
   &__blocked {
     flex: 1;
@@ -42,5 +49,16 @@
       font-size: 2.5rem;
       color: #b6bbc2;
     }
+  }
+}
+
+app-chat-panel {
+  flex: 0 0 21rem;
+  min-width: 0;
+}
+
+@media (max-width: 70rem) {
+  app-chat-panel {
+    flex-basis: 17rem;
   }
 }

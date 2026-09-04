@@ -27,6 +27,8 @@ import type { CallFacade } from '../../../core/stream/call-facade';
 export class ControlBar {
   readonly exam = input.required<CallFacade>();
   readonly isProctor = input(false);
+  readonly chatOpen = input(false);
+  readonly toggleChat = output<void>();
   readonly leave = output<void>();
 
   private readonly notifier = inject(Notifier);

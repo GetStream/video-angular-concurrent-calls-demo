@@ -1,0 +1,39 @@
+<!-- The dark variant is selected through ThemeService in the component, not with a class
+     here: the library stamps its own theme class on the channel root. -->
+<aside class="chat">
+  <header class="chat__head">
+    <mat-icon>chat_bubble_outline</mat-icon>
+    <span class="chat__title">Chat</span>
+    <span class="chat__hint">one room — students and proctors</span>
+  </header>
+
+  @if (problem() === 'no-channel') {
+    <div class="chat__error">
+      <p>No chat room for this call yet — it appears once a proctor joins.</p>
+      <button matButton type="button" (click)="open()">Check again</button>
+    </div>
+  } @else if (problem() === 'not-a-member') {
+    <div class="chat__error">
+      <p>
+        You're not on this exam's chat room. Reading it requires being one of its members,
+        so ask a proctor to add you.
+      </p>
+      <button matButton type="button" (click)="open()">Try again</button>
+    </div>
+  } @else if (problem() === 'failed') {
+    <div class="chat__error">
+      <p>Couldn't reach the chat for this call.</p>
+      <button matButton type="button" (click)="open()">Retry</button>
+    </div>
+  } @else if (!ready()) {
+    <div class="chat__loading"><mat-spinner diameter="24" /></div>
+  } @else {
+    <div class="chat__body">
+      <stream-channel>
+        <stream-message-list />
+        <stream-notification-list />
+        <stream-message-input />
+      </stream-channel>
+    </div>
+  }
+</aside>

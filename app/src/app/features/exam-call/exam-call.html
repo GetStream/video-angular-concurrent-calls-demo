@@ -17,12 +17,29 @@
       <p>Joining {{ callId() }}…</p>
     </div>
   } @else if (exam(); as call) {
-    @if (isProctor()) {
-      <app-proctor-grid [exam]="call" [callId]="callId()" />
-    } @else {
-      <app-student-stage [exam]="call" [callId]="callId()" />
-    }
-    <app-control-bar [exam]="call" [isProctor]="isProctor()" (leave)="leaveCall()" />
+    <div class="call__body">
+      @if (isProctor()) {
+        <app-proctor-grid [exam]="call" [callId]="callId()" />
+      } @else {
+        <app-student-stage [exam]="call" [callId]="callId()" />
+      }
+
+      @if (chatOpen()) {
+        <app-chat-panel
+          [callId]="callId()"
+          [canManage]="isProctor()"
+          [memberIds]="memberIds()"
+        />
+      }
+    </div>
+
+    <app-control-bar
+      [exam]="call"
+      [isProctor]="isProctor()"
+      [chatOpen]="chatOpen()"
+      (toggleChat)="toggleChat()"
+      (leave)="leaveCall()"
+    />
 
     <!-- Always mounted, for everyone: remote audio has to play whether or not the person
          has a tile on screen. Without it the call is silent. -->

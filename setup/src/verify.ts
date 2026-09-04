@@ -54,6 +54,8 @@ const chat = await c.chat.getChannelType({ name: 'messaging' });
 console.log("\nChat channel type 'messaging'");
 check('proctor has chat grants', (chat.grants?.['proctor']?.length ?? 0) > 0, `${chat.grants?.['proctor']?.length} grants`);
 check('student has chat grants', (chat.grants?.['student']?.length ?? 0) > 0, `${chat.grants?.['student']?.length} grants`);
+check('proctor can read and repair the room', ['read-channel','update-channel-members'].every((c) => chat.grants?.['proctor']?.includes(c)));
+check('student is membership-gated (no blanket read-channel)', !chat.grants?.['student']?.includes('read-channel'));
 
 const { users } = await c.queryUsers({ payload: { filter_conditions: { role: { $in: ['proctor','student'] } }, limit: 30 } });
 console.log('\nSeeded users');

@@ -56,6 +56,11 @@
     background: #b3403f;
     --mat-icon-button-icon-color: #fff;
   }
+
+  &--active {
+    background: #2f6fd0;
+    --mat-icon-button-icon-color: #fff;
+  }
 }
 
 .ctl-wide {

@@ -161,3 +161,22 @@ const CALL_RELATED = new Set<string>([
 ]);
 
 const unique = (xs: string[]): string[] => [...new Set(xs)];
+
+/**
+ * Extra chat capabilities for proctors on the `messaging` channel type.
+ *
+ * The default model is membership-gated: plain `read-channel` belongs to `channel_member`,
+ * while the `user` baseline only carries `read-channel-owner` (read what you created). That
+ * is right for students - being on the call's roster is what lets them see the room.
+ *
+ * A proctor needs more, because nobody can retrofit channel membership from the client: if a
+ * channel ever exists without the right members, the room is unreachable for everyone and
+ * unrepairable. Giving proctors read plus member management makes them the room's moderator,
+ * which is what a real proctoring app would do, and keeps students membership-gated.
+ */
+export const CHAT_PROCTOR_EXTRA: string[] = [
+  'read-channel',
+  'read-channel-members',
+  'create-message',
+  'update-channel-members',
+];

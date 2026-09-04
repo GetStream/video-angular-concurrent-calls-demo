@@ -24,7 +24,8 @@ Built in steps. Right now:
 | 2. Angular app skeleton (config, services, directives, routing) | **Done** — builds, tests and serves |
 | 3. User picker | **Done** — connects both Stream clients and routes to the lobby |
 | 4. Lobby + exam call | **Done** — device setup, background blur, member pickers, both call layouts |
-| 5-7. Chat, whisper, extras | Not started |
+| 5. Chat in the exam call | **Done** — one room per call, stock components, dark theme |
+| 6-7. Whisper channel, extras | Not started |
 
 `npm run setup`, `npm start`, `npm run build` and `npm test` all work. The three routes exist but
 render placeholders — the real screens arrive in steps 3-7.
@@ -215,6 +216,14 @@ Two things here are deliberately not production patterns:
 **`STREAM_API_KEY is not set`** — you haven't created `setup/.env`. Copy `setup/.env.example`.
 
 **`Token signature is invalid` (401)** — the secret in `setup/.env` doesn't match the API key.
+
+**The chat panel renders light on the dark call screens** — the theme is owned by
+`stream-chat-angular`, not by your CSS: `ChannelComponent` stamps
+`class="str-chat__theme-{{ theme$ }}"` on its own root, defaulting to `light`. Putting the dark
+class on an ancestor has no effect. Switch it with `ThemeService.theme$.next('dark')`.
+
+**The chat panel is empty and receives no messages** — `ChannelService.setAsActiveChannel()` makes
+no network request; it reads local state. `await channel.watch()` first.
 
 **The member pickers on the create screen are empty (no error)** — the `proctor` role is missing
 the `search-user` permission. App-level grants are one map shared across products, so a

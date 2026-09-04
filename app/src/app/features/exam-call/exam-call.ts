@@ -21,6 +21,7 @@ import { DevicePreferences } from '../../core/stream/device-preferences';
 import { EXAM_CALL_TYPE, LobbyCall } from '../../core/stream/lobby-call';
 import { VideoClient } from '../../core/stream/video-client';
 import { AudioSink } from '../../shared/components/audio-sink/audio-sink';
+import { ChatPanel } from './chat-panel/chat-panel';
 import { ControlBar } from './control-bar/control-bar';
 import { ProctorGrid } from './proctor-grid/proctor-grid';
 import { StudentStage } from './student-stage/student-stage';
@@ -40,6 +41,7 @@ import { StudentStage } from './student-stage/student-stage';
     MatIconModule,
     MatProgressSpinnerModule,
     AudioSink,
+    ChatPanel,
     ControlBar,
     ProctorGrid,
     StudentStage,
@@ -66,6 +68,18 @@ export class ExamCall implements OnInit {
   protected readonly notOnRoster = signal(false);
 
   protected readonly joined = computed(() => this.exam()?.joined() ?? false);
+
+  /** Open by default: in an exam the room is the only way a student can ask anything. */
+  protected readonly chatOpen = signal(true);
+
+  /** The call's roster - the chat channel's membership is kept identical to it. */
+  protected readonly memberIds = computed(
+    () => this.exam()?.members().map((m) => m.user_id) ?? [],
+  );
+
+  protected toggleChat(): void {
+    this.chatOpen.update((open) => !open);
+  }
 
   private call?: Call;
   private readonly onPageHide = () => void this.teardown();
