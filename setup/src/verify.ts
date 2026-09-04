@@ -41,7 +41,10 @@ check('target resolution 1280x720', exam.settings.video.target_resolution.width 
 
 const whisper = await c.video.getCallType({ name: 'audio_room' });
 console.log("\nCall type 'audio_room' (whisper)");
-check('only call_member_proctor can join', same(whisper.grants['call_member_proctor'], ['join-call','read-call','send-audio','end-call']));
+check('only call_member_proctor can join', same(whisper.grants['call_member_proctor'], ['join-call','read-call','send-audio','send-event','end-call']));
+// Without this the shared whisper mode silently never opens for anyone but the initiator.
+check('call_member_proctor may send the whisper events', !!whisper.grants['call_member_proctor']?.includes('send-event'));
+check('send-event is granted here only', !exam.grants['call_member_proctor']?.includes('send-event'));
 check('call_member_student cannot join', !whisper.grants['call_member_student']?.length);
 check('recording auto-on', whisper.settings.recording.mode === 'auto-on');
 check('audio only recording', whisper.settings.recording.audio_only === true);

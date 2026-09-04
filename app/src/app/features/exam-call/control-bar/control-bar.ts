@@ -15,6 +15,7 @@ import { OwnCapability } from '@stream-io/video-client';
 import { Notifier } from '../../../core/errors/notifier';
 import { DevicePreferences } from '../../../core/stream/device-preferences';
 import type { CallFacade } from '../../../core/stream/call-facade';
+import type { WhisperSession } from '../whisper/whisper-session';
 
 /** The bar along the bottom of both call layouts. */
 @Component({
@@ -28,6 +29,10 @@ export class ControlBar {
   readonly exam = input.required<CallFacade>();
   readonly isProctor = input(false);
   readonly chatOpen = input(false);
+  /** Present only for a proctor whose whisper call is joined. */
+  readonly whisper = input<WhisperSession | null>(null);
+  /** The exam mic belongs to the whisper reconciler while the channel is open. */
+  readonly micLocked = input(false);
   readonly toggleChat = output<void>();
   readonly leave = output<void>();
 
@@ -38,6 +43,7 @@ export class ControlBar {
   protected readonly cameraOn = computed(() => this.exam().cameraOn());
   protected readonly sharing = computed(() => this.exam().sharingScreen());
   protected readonly canEnd = computed(() => this.exam().can(OwnCapability.END_CALL)());
+  protected readonly whispering = computed(() => this.whisper()?.panelOpen() ?? false);
 
   /** Ticks once a second so the elapsed time actually moves. */
   private readonly now = signal(Date.now());
@@ -58,13 +64,40 @@ export class ControlBar {
     inject(DestroyRef).onDestroy(() => clearInterval(timer));
   }
 
+  /**
+   * A proctor's exam microphone is not toggled directly: the whisper reconciler owns both
+   * microphones and force-mutes this one whenever the proctors-only channel is open, so the
+   * button records an *intent* it applies when the channel closes. Everyone else - and a
+   * proctor before the whisper call is joined - toggles the device itself.
+   */
   protected async toggleMic(): Promise<void> {
+    if (this.micLocked()) return;
     const on = !this.micOn();
+    const whisper = this.whisper();
+
+    if (whisper) {
+      whisper.setExamMicIntent(on);
+      this.prefs.setMicOn(on);
+      return;
+    }
+
     const result = await this.notifier.attempt(
       () => (on ? this.exam().call.microphone.enable() : this.exam().call.microphone.disable()),
       { what: on ? 'Unmuting' : 'Muting' },
     );
     if (result.ok) this.prefs.setMicOn(on);
+  }
+
+  /**
+   * Puts *every* proctor into the channel - see `WhisperSession` for why it is shared.
+   *
+   * Not `[disabled]` while whispering: a disabled Material button greys its own label out,
+   * and this is precisely the state that has to stay legible. It reads as an active pill and
+   * the handler is a no-op instead.
+   */
+  protected async startWhisper(): Promise<void> {
+    if (this.whispering()) return;
+    await this.whisper()?.start();
   }
 
   /** Proctors only: a student's camera stays on for the length of the exam. */
@@ -91,7 +124,17 @@ export class ControlBar {
     });
   }
 
+  /**
+   * Ends both calls when there are two. Nothing cascades between them server-side, so
+   * ending only the exam would leave every proctor in a live whisper call - microphone
+   * open, automatic recording still running.
+   */
   protected async endForEveryone(): Promise<void> {
+    const whisper = this.whisper();
+    if (whisper) {
+      await whisper.endBothCalls();
+      return;
+    }
     await this.notifier.attempt(() => this.exam().call.endCall(), {
       what: 'Ending the exam',
     });

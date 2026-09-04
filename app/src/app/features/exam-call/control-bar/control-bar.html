@@ -10,7 +10,10 @@
       type="button"
       class="ctl"
       [class.ctl--off]="!micOn()"
-      [matTooltip]="micOn() ? 'Mute' : 'Unmute'"
+      [disabled]="micLocked()"
+      [matTooltip]="
+        micLocked() ? 'Muted while the proctors-only channel is open' : micOn() ? 'Mute' : 'Unmute'
+      "
       [attr.aria-label]="micOn() ? 'Mute' : 'Unmute'"
       (click)="toggleMic()"
     >
@@ -54,6 +57,21 @@
     >
       <mat-icon>chat_bubble_outline</mat-icon>
     </button>
+
+    <!-- Only a proctor gets the private channel, and only once it is actually joined. -->
+    @if (whisper()) {
+      <button
+        matButton
+        type="button"
+        class="ctl-wide"
+        [class.ctl-wide--on]="whispering()"
+        [attr.aria-pressed]="whispering()"
+        (click)="startWhisper()"
+      >
+        <mat-icon>record_voice_over</mat-icon>
+        {{ whispering() ? 'Whispering' : 'Whisper' }}
+      </button>
+    }
   </div>
 
   <div class="bar__end">

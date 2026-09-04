@@ -4,12 +4,20 @@
       <mat-icon>person_off</mat-icon>
       <h1>You're not on this exam's roster</h1>
       <p>
-        Only the proctors and students added when the call was created can join it. Ask a
-        proctor to include you, then try the link again.
+        Only the proctors and students added when the call was created can join it. Ask a proctor to
+        include you, then try the link again.
       </p>
-      <button matButton="filled" type="button" (click)="backToLobby()">
-        Back to the lobby
-      </button>
+      <button matButton="filled" type="button" (click)="backToLobby()">Back to the lobby</button>
+    </div>
+  } @else if (ended()) {
+    <div class="call__blocked">
+      <mat-icon>call_end</mat-icon>
+      <h1>The exam has ended</h1>
+      <p>
+        A proctor ended the call for everyone. The SDK left both calls on your behalf, so nothing is
+        still publishing.
+      </p>
+      <button matButton="filled" type="button" (click)="backToLobby()">Back to the lobby</button>
     </div>
   } @else if (joining() || !joined()) {
     <div class="call__joining">
@@ -19,7 +27,7 @@
   } @else if (exam(); as call) {
     <div class="call__body">
       @if (isProctor()) {
-        <app-proctor-grid [exam]="call" [callId]="callId()" />
+        <app-proctor-grid [exam]="call" [callId]="callId()" [whisperOpen]="whisperOpen()" />
       } @else {
         <app-student-stage [exam]="call" [callId]="callId()" />
       }
@@ -33,6 +41,8 @@
       [exam]="call"
       [isProctor]="isProctor()"
       [chatOpen]="chatOpen()"
+      [whisper]="whisper()"
+      [micLocked]="micLocked()"
       (toggleChat)="toggleChat()"
       (leave)="leaveCall()"
     />
@@ -40,5 +50,49 @@
     <!-- Always mounted, for everyone: remote audio has to play whether or not the person
          has a tile on screen. Without it the call is silent. -->
     <app-audio-sink [call]="call.call" [participants]="call.participants()" />
+
+    @if (whisper(); as session) {
+      <!-- Mounted whenever the proctor is in the whisper call, *not* inside the panel's
+           condition. The panel opens about a round trip before the audio arrives, so a
+           panel-scoped sink would clip the first moment of every whisper - and proctors
+           stay joined to the channel the whole time, so the next `whisper.start` has to
+           find working audio already in place. -->
+      <app-audio-sink
+        [call]="session.whisper.call"
+        [participants]="session.whisper.participants()"
+      />
+
+      @if (session.panelOpen()) {
+        <app-whisper-panel [session]="session" />
+      }
+    }
+
+    @if (whisperBlocked()) {
+      <!-- Blocking on purpose. Without the whisper call joined, this proctor cannot detect
+           that colleagues are whispering, so an open exam microphone here is how whisper
+           audio would reach the students. The microphone is already held shut. -->
+      <div class="blocker">
+        <section class="blocker__card" role="alertdialog" aria-labelledby="whisper-blocked">
+          <mat-icon class="blocker__icon">mic_off</mat-icon>
+          <h2 id="whisper-blocked">The proctors-only channel isn't available</h2>
+          <p>
+            Your microphone is muted and stays muted until you can reach the channel: with no way to
+            tell when the other proctors are whispering, an open microphone here could carry their
+            conversation to the students.
+          </p>
+          <div class="blocker__actions">
+            <button
+              matButton="filled"
+              type="button"
+              [disabled]="retryingWhisper()"
+              (click)="retryWhisper()"
+            >
+              {{ retryingWhisper() ? 'Trying…' : 'Try again' }}
+            </button>
+            <button matButton type="button" (click)="leaveCall()">Leave the exam</button>
+          </div>
+        </section>
+      </div>
+    }
   }
 </div>

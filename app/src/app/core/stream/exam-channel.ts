@@ -71,8 +71,9 @@ export class ExamChannel {
     if (!found.ok) return { error: 'failed' };
 
     if (!found.value.length) {
-      // Either it genuinely does not exist, or we cannot see it. Both mean the same thing
-      // to a student: wait for a proctor, who creates and repairs the room on entry.
+      // Either it genuinely does not exist, or we cannot see it. Both look the same from
+      // here, and neither is something this client should try to fix - the room is created
+      // once, beside the call, and never retrofitted.
       return { error: 'no-channel' };
     }
 

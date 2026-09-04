@@ -40,6 +40,8 @@ const CAMERA_RESOLUTION = { width: 320, height: 240 };
 export class ProctorGrid {
   readonly exam = input.required<CallFacade>();
   readonly callId = input.required<string>();
+  /** The proctors-only channel is open, so nothing this proctor says reaches a student. */
+  readonly whisperOpen = input(false);
 
   private readonly notifier = inject(Notifier);
 

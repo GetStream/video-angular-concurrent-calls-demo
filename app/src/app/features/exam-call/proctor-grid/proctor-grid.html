@@ -4,6 +4,13 @@
     <code class="grid__id">{{ callId() }}</code>
     <span class="badge">PROCTOR</span>
 
+    <!-- Persistent, next to the role: while the channel is open this is the fact that
+         matters most, and it must not live only inside the panel. -->
+    @if (whisperOpen()) {
+      <span class="badge badge--private">PROCTORS ONLY</span>
+      <span class="badge">students can't hear you</span>
+    }
+
     @if (notSharing() > 0) {
       <span class="badge badge--alert">{{ notSharing() }} not sharing</span>
     }

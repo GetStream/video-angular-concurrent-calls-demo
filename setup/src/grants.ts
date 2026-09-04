@@ -47,6 +47,7 @@ const PERMISSION = {
   READ_CALL: 'read-call',
   CREATE_CALL: 'create-call',
   SEND_AUDIO: 'send-audio',
+  SEND_EVENT: 'send-event',
   SEND_VIDEO: 'send-video',
   SCREENSHARE: 'screenshare',
   END_CALL: 'end-call',
@@ -104,11 +105,19 @@ export const EXAM_GRANTS: Record<string, string[]> = {
  * workflow. `end-call` is needed because "End exam" ends both calls - the whisper call must
  * never outlive the exam call. No recording permission, because `recording.mode` is
  * `auto-on` and the server starts it, so the client never calls `startRecording()`.
+ *
+ * `send-event` is what `sendCustomEvent()` needs, and it is easy to miss: the whisper mode
+ * is shared between proctors by a custom WS event on this call, and without the grant the
+ * event fails with *"not allowed to perform action SendEvent"* - visible only as a whisper
+ * that never opens for anyone else. It is granted **here only**; nothing sends events on the
+ * exam call. Note the neighbouring `send-custom-event` permission is Chat's, for
+ * `channel.sendEvent()`, and is not what this needs.
  */
 export const WHISPER_GRANTS: Record<string, string[]> = {
   [ROLE.MEMBER_PROCTOR]: [
     ...MEMBER_BASE,
     PERMISSION.SEND_AUDIO,
+    PERMISSION.SEND_EVENT,
     PERMISSION.END_CALL,
   ],
   // students are never whisper members and hold no role that grants join-call here
@@ -153,6 +162,7 @@ const CALL_RELATED = new Set<string>([
   PERMISSION.SEND_AUDIO,
   PERMISSION.SEND_VIDEO,
   PERMISSION.SCREENSHARE,
+  PERMISSION.SEND_EVENT,
   PERMISSION.END_CALL,
   PERMISSION.START_RECORDING,
   PERMISSION.STOP_RECORDING,

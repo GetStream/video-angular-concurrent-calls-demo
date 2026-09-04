@@ -19,6 +19,7 @@ import { CurrentUser } from '../../core/auth/current-user';
 import { Notifier } from '../../core/errors/notifier';
 import { ExamChannel } from '../../core/stream/exam-channel';
 import { EXAM_CALL_TYPE, LobbyCall } from '../../core/stream/lobby-call';
+import { WhisperCall } from '../../core/stream/whisper-call';
 import { AppHeader } from '../../shared/components/app-header/app-header';
 import { DeviceSetup } from './device-setup/device-setup';
 import { MemberPicker } from './member-picker/member-picker';
@@ -56,6 +57,7 @@ export class Lobby {
   private readonly currentUser = inject(CurrentUser);
   private readonly lobbyCall = inject(LobbyCall);
   private readonly examChannel = inject(ExamChannel);
+  private readonly whisperCall = inject(WhisperCall);
   private readonly notifier = inject(Notifier);
   private readonly router = inject(Router);
 
@@ -85,9 +87,7 @@ export class Lobby {
   );
   protected readonly joining = signal(false);
 
-  protected readonly shareLink = computed(
-    () => `${location.origin}/?call_id=${this.newCallId()}`,
-  );
+  protected readonly shareLink = computed(() => `${location.origin}/?call_id=${this.newCallId()}`);
   protected readonly canJoin = computed(() => this.joinCallId().trim().length > 0);
 
   constructor() {
@@ -170,7 +170,7 @@ export class Lobby {
     ];
 
     const result = await this.notifier.attempt(
-      () => call.getOrCreate({ data: { members, custom: { mode: 'exam' } } }),
+      () => call.getOrCreate({ data: { members } }),
       { what: 'Creating the exam call', fatal: true, retry: () => void this.startExam() },
     );
     if (!result.ok) {
@@ -178,8 +178,18 @@ export class Lobby {
       return;
     }
 
+    // The proctors-only channel is created here too, with this call's proctors as its only
+    // members. Navigation is blocked if it fails, on purpose: a proctor who cannot reach the
+    // whisper call has to be held muted in the exam call (see the exam route for why that is
+    // a safety rule), so pressing the button again beats starting a half-built exam.
+    const whisperReady = await this.whisperCall.createFor(callId, this.proctorIds());
+    if (!whisperReady) {
+      this.starting.set(false);
+      return;
+    }
+
     // The room is created here, right after the call, with the same roster - one intent,
-    // two get-or-creates. Nothing else creates it, so membership can never drift.
+    // three get-or-creates. Nothing else creates it, so membership can never drift.
     await this.examChannel.createFor(
       callId,
       members.map((member) => member.user_id),

@@ -65,22 +65,28 @@ export class DevicePreferences {
    * Explicitly setting the status is what keeps the backend defaults out of the picture:
    * once `status` is set, the SDK's `shouldApplyDefaults` is false, so the call type's
    * `camera_default_on` / `mic_default_on` can never surprise the user.
+   *
+   * `camera: false` / `mic: false` force a device off whatever the stored preference says.
+   * Both are what the whisper call is prepared with: it must never acquire a camera the
+   * exam call is already publishing, and it must never join with a live microphone.
+   *
+   * The speaker is selected here for *every* call, not just the first, because
+   * `SpeakerManager` state is per-`Call` - a proctor in two calls has two of them, and the
+   * one that never had `select()` called on it plays out of the system default instead.
    */
-  async applyTo(call: Call, opts: { camera?: boolean } = {}): Promise<void> {
+  async applyTo(call: Call, opts: { camera?: boolean; mic?: boolean } = {}): Promise<void> {
     const { cameraId, micId, speakerId, cameraOn, micOn } = this.prefs();
-    const wantCamera = opts.camera ?? true;
+    const wantCamera = (opts.camera ?? true) && cameraOn;
+    const wantMic = (opts.mic ?? true) && micOn;
 
+    // Selecting the device even when we are about to disable it means a later unmute uses
+    // the mic the user picked in the lobby rather than the system default.
     if (micId) await call.microphone.select(micId);
     if (speakerId) await call.speaker.select(speakerId);
-    await (micOn ? call.microphone.enable() : call.microphone.disable());
+    await (wantMic ? call.microphone.enable() : call.microphone.disable());
 
-    if (wantCamera) {
-      if (cameraId) await call.camera.select(cameraId);
-      await (cameraOn ? call.camera.enable() : call.camera.disable());
-    } else {
-      // The whisper call is audio-only; never acquire a second camera handle.
-      await call.camera.disable();
-    }
+    if (cameraId && (opts.camera ?? true)) await call.camera.select(cameraId);
+    await (wantCamera ? call.camera.enable() : call.camera.disable());
   }
 }
 

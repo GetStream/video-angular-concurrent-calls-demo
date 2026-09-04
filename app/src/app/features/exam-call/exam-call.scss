@@ -8,6 +8,9 @@
 }
 
 .call {
+  /* The whisper panel and the blocked-channel notice are absolutely positioned over the
+     call, so this has to be their containing block. */
+  position: relative;
   display: flex;
   flex-direction: column;
   height: 100vh;
@@ -60,5 +63,53 @@ app-chat-panel {
 @media (max-width: 70rem) {
   app-chat-panel {
     flex-basis: 17rem;
+  }
+}
+
+/* Same shape as the whisper panel, different job: this one cannot be dismissed. */
+.blocker {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: rgb(8 10 12 / 72%);
+
+  &__card {
+    width: min(30rem, 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.875rem;
+    padding: 1.75rem;
+    border: 1px solid #d05353;
+    border-radius: 0.75rem;
+    background: #1e2126;
+    text-align: center;
+
+    h2 {
+      margin: 0;
+      font: var(--mat-sys-title-large);
+    }
+
+    p {
+      margin: 0;
+      color: #b6bbc2;
+      font: var(--mat-sys-body-medium);
+    }
+  }
+
+  &__icon {
+    width: 2.5rem;
+    height: 2.5rem;
+    font-size: 2.5rem;
+    color: #f0b3b3;
+  }
+
+  &__actions {
+    display: flex;
+    gap: 0.75rem;
   }
 }

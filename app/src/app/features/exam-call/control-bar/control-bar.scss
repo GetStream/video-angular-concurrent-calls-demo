@@ -67,8 +67,12 @@
   --mat-button-text-label-text-color: #e6e8ea;
   border: 1px solid #4a5058;
 
+  /* Filled, not just re-tinted: this is an "you are currently doing this" state, and the
+     wireframe draws it as a solid pill. A border-only variant is easy to miss - and while
+     whispering, missing it is the one thing that must not happen. */
   &--on {
-    border-color: #4c8bf5;
-    --mat-button-text-label-text-color: #a8c7fa;
+    border-color: var(--mat-sys-primary);
+    background: var(--mat-sys-primary);
+    --mat-button-text-label-text-color: var(--mat-sys-on-primary);
   }
 }

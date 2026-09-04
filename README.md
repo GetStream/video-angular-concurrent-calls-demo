@@ -25,10 +25,10 @@ Built in steps. Right now:
 | 3. User picker | **Done** — connects both Stream clients and routes to the lobby |
 | 4. Lobby + exam call | **Done** — device setup, background blur, member pickers, both call layouts |
 | 5. Chat in the exam call | **Done** — one room per call, stock components, dark theme |
-| 6-7. Whisper channel, extras | Not started |
+| 6. Proctors-only whisper channel | **Done** — shared mode over custom events, verified across four clients |
+| 7. Recording, captions, network badges | Not started |
 
-`npm run setup`, `npm start`, `npm run build` and `npm test` all work. The three routes exist but
-render placeholders — the real screens arrive in steps 3-7.
+`npm run setup`, `npm start`, `npm run build` and `npm test` all work.
 
 ---
 
@@ -117,6 +117,26 @@ Pick any of the 14 seeded users on the first screen — that is the whole identi
 create exam calls; students can only join one they are a member of. A call link (`?call_id=…`)
 survives the picker, so a student arriving on one is taken straight to it after choosing who to be.
 
+### The walkthrough
+
+Two browser profiles is enough for most of it; the whisper channel wants three.
+
+1. **Proctor**: pick `proctor-john`, set up camera and mic (background blur is optional), leave all
+   ten students selected, add a second proctor, then **Start exam call**. Copy the link.
+2. **Student**: open the link in another profile, pick `student-tom`, join. The camera is forced on
+   for the exam; press **Share screen** and choose *Entire screen*. The proctor's column for that
+   student turns from red to live.
+3. **Chat**: the room is open by default on both sides — same channel, created beside the call with
+   the same roster.
+4. **Whisper**: as a proctor, press **Whisper**. Every proctor's panel opens and every proctor's exam
+   mic mutes, so the student hears nothing; only whoever pressed it is audible to the others. Anyone
+   can unmute inside the panel. **Go back to students** takes *everyone* out and restores each
+   proctor's own previous mic state. Two things worth trying: bring a third proctor in while the
+   first two are whispering — they arrive with the panel already up and their mic already muted,
+   having received no event — and then have everyone mute themselves in the panel. The channel goes
+   silent and *nobody* drops out of it, because only **Go back to students** ends it.
+5. **End exam** ends both calls for everyone.
+
 Background-filter models (~26 MB) are copied into `app/public/mediapipe/` by a `postinstall` hook,
 so the filters load from your own origin instead of a CDN. That directory is generated and
 gitignored.
@@ -157,7 +177,12 @@ call_member_proctor   ...the same, plus start-recording, stop-recording,
 ```
 
 On `audio_room` (the whisper channel) only `call_member_proctor` gets anything at all:
-`join-call, read-call, send-audio, end-call`.
+`join-call, read-call, send-audio, send-event, end-call`.
+
+`send-event` is the one to know about. It is what `call.sendCustomEvent()` needs, the whisper mode
+is shared between proctors by exactly one custom event — and there is **no `OwnCapability` entry
+for it**, so there is nothing to grep for in the SDK; the id only shows up in `listPermissions()`.
+Its neighbour `send-custom-event` is Chat's permission for `channel.sendEvent()`, not this one.
 
 ### 3. Call type settings
 
@@ -168,6 +193,17 @@ On `audio_room` (the whisper channel) only `call_member_proctor` gets anything a
 - **`audio_room`** — the whisper channel. Video and screen sharing **disabled** so no camera is ever
   requested, backstage **off** (the default would require `goLive()`), mic off on join, and
   recording `auto-on` and audio-only, so whisper conversations are captured without a UI toggle.
+
+  **Two things to know about `auto-on` here.** It is blunt: with backstage off, recording starts the
+  moment the first proctor enters the exam route, not when anyone whispers — so it records near-total
+  silence for the length of the exam, billed per minute plus storage, on every demo run. The
+  alternative is `mode: 'available'` driven explicitly (`startRecording()` on `whisper.start`,
+  `stopRecording()` on `whisper.end`, which the shared-mode design makes trivial), capturing the same
+  interesting audio for a fraction of the minutes. And **wear headphones**: exam audio playing through
+  speakers while the whisper mic captures means student voices can bleed into the whisper recording.
+  Echo cancellation helps but is imperfect, and for a compliance-flavoured feature that is not a claim
+  worth making by accident. The app ducks the exam call to 20% volume while whispering for the same
+  reason.
 
 ### 4. Chat grants
 
@@ -192,6 +228,93 @@ Everything the browser needs is written to **`app/public/demo-config.json`**:
 ```
 
 That file is **gitignored** — it holds non-expiring user tokens.
+
+---
+
+## The whisper channel
+
+The one part of this demo that is genuinely hard, and the reason it is worth reading.
+
+A proctor is joined to **two calls at once**: the exam call (`default:<callId>`) and a proctors-only
+audio channel (`audio_room:<callId>`, same id). One `StreamVideoClient` holds both — it tracks a
+*list* of calls with no "active call" concept, and the join-once guard is per-`Call` instance.
+Both are created together in the lobby, so their rosters cannot drift, and students are never
+members of the second one. Nothing is stored in either call's `custom` data — the call *type* is what
+tells them apart, so a `mode` field would carry no information, and `getOrCreate` overwrites custom
+data on an existing call, so writing one would also be a small hazard.
+
+**Mode is global to the call, not per-user.** One proctor pressing *Whisper* puts every proctor into
+the channel; one proctor pressing *Go back to students* takes every proctor out and mutes every
+whisper microphone. That symmetry is the whole safety argument: there is never a moment where one
+proctor is unmuted to the students while colleagues are still whispering, so no whisper audio can
+reach a student through an open exam microphone. Every proctor in the channel is muted in the exam
+call, including one who is only listening and never pressed anything.
+
+It is signalled **two ways, on purpose**:
+
+1. **A custom WS event** (`sendCustomEvent({ type: 'whisper.start' | 'whisper.end', by, at })`) is the
+   fast path. It arrives on every watching client as the SDK event named `'custom'`, with the payload
+   under `event.custom` — so the discriminator has to live *inside* the payload, not in the event name.
+   The sender is not echoed its own event, so the initiator applies its change optimistically and the
+   handler is idempotent; the `at` timestamp stops a late `whisper.start` resurrecting a mode someone
+   just closed.
+2. **Anyone already publishing audio in the whisper call**, derived from `participants$`. This is the
+   condition a one-shot event cannot cover: a proctor who joins mid-whisper, or whose client
+   reconnects, receives no event at all. Participant state, by contrast, is *replayed* — hydrated from
+   the SFU join response — so it is already correct on that client's first emission.
+
+**Hearing the channel is a way *in* to the mode, never a way out of it.** This is the subtle one, and
+the easy mistake is to write the panel condition as a live `mode || someoneAudible` — which
+reintroduces the very leak the shared mode removes. A proctor who joined mid-whisper has `mode ===
+false`; their panel is open *only* because of the audio. The moment every colleague happens to mute
+themselves in the panel — mode still on for all of them, free to unmute a second later — that
+disjunction goes false, so this proctor's panel closes and their exam microphone comes back, alone,
+into a channel that is still live. Audio going quiet says nothing about whether the mode is over. So
+audio **latches** the mode, on the rising edge, and only a `whisper.end` clears it.
+
+The rising edge matters in the other direction too: after `whisper.end` the remote tracks are still
+stopping, so the audio flag stays `true` for a moment and emits nothing new — it cannot re-latch what
+was just closed. A live check there would deadlock the exit.
+
+The audio condition keeps one narrower job: **holding the exam microphone shut through the tail.**
+`whisper.end` closes the panel at once, but a colleague's track takes a moment to stop, and opening
+this microphone into that tail is how the last fragment of a whisper reaches the students. Hence two
+signals, each named for what it does — `panelOpen` (the mode) and `examMicHeld` (the mode, plus the
+tail).
+
+A proctor also *joins the exam call muted* regardless of their lobby setting, and is unmuted by the
+reconciler once the whisper state is known — otherwise they publish to the students for the fraction
+of a second in between.
+
+**The two controls send before they apply**, and change nothing locally if the event is refused.
+Optimism is tempting here and it is wrong twice over: unmuting the whisper mic while the request is
+in flight would latch every *other* proctor into a mode by the audio they briefly heard, with the
+proctor who started it showing no panel and no way to end it; and leaving the mode locally before
+`whisper.end` is accepted is what brings *your* exam mic back while colleagues are still whispering.
+Both fail closed, for a round trip of button latency.
+
+**Both microphones are driven by one single-flight reconciler**, not by an effect:
+`toObservable(desired).pipe(distinctUntilChanged(), concatMap(reconcile))`. `concatMap`, never
+`switchMap` — a half-finished hand-off must not be abandoned. It releases before it acquires in both
+directions, re-reads the intent after its awaits in case you clicked again, and falls back to muted
+in *both* calls if `enable()` throws. The SDK cannot serialise this for you: `statusChangeSettled` is
+per-manager, and cancellation does not abort an in-flight `unmuteStream()` — it finishes
+`getUserMedia` and publishes.
+
+**A failed whisper join is blocking for a proctor, not best-effort.** Not for tidiness: the interlock
+above reads the whisper call's participants, which only carry data while you are joined. A proctor in
+the exam call but *not* the whisper call cannot tell that colleagues are whispering, has no reason to
+mute, and their open microphone is exactly how whisper audio would reach the students. So the mic is
+held shut and the route is blocked, with Retry and Leave.
+
+`endCall()` marks one call ended and the auto-leave is per-call, so **nothing cascades**: "End exam"
+ends both, and the whisper call is also torn down whenever the exam call reaches a terminal state. The
+whisper channel must never outlive the exam.
+
+Files: [`whisper-call.ts`](./app/src/app/core/stream/whisper-call.ts) (create / prepare / join),
+[`whisper-session.ts`](./app/src/app/features/exam-call/whisper/whisper-session.ts) (state machine and
+reconciler, with [tests](./app/src/app/features/exam-call/whisper/whisper-session.spec.ts)),
+[`whisper-panel.ts`](./app/src/app/features/exam-call/whisper/whisper-panel.ts) (the UI).
 
 ---
 
@@ -245,6 +368,28 @@ message rather than a partial write. Run with `LIST_PERMISSIONS=1` to print all 
 optional but behaves as required: sending a `video` block without it makes the server read 0×0.
 `configureCallType` carries the current value forward, so you should only see this if you add a new
 call type by hand.
+
+**A proctor drops out of the whisper channel on their own when everyone stops talking** — the panel
+condition is treating "somebody is publishing audio" as a live state rather than as a way *in*. A
+proctor who joined mid-whisper is in the mode only because of that audio, so when colleagues mute
+themselves the condition goes false and that proctor's microphone opens into a channel that is still
+live. Latch the mode on the rising edge and clear it only on the explicit end event.
+
+**`not allowed to perform action SendEvent`** — `send-event` is missing from the call type's grants.
+`sendCustomEvent()` needs it, and there is no `OwnCapability` entry for it, so it is easy to leave
+out; without it the shared whisper mode silently opens for nobody but the initiator.
+
+**Everyone sits on "Joining…" after End exam** — the SDK auto-leaves when a call ends, so
+`callingState` goes `LEFT` and a naive "not joined yet" guard renders forever. There is no separate
+event to wait for: the terminal state *is* the notification, so distinguish "we left" from "the call
+ended under us" and render an ended state for the second case.
+
+**A ghost participant lingers after a refresh or tab close** — the client registers no
+`beforeunload`/`pagehide` handler of its own (its only `window` listeners are `online`/`offline`), so
+neither call is left and the SFU waits out its disconnection timeout. This app registers `pagehide`
+(not `beforeunload` — unreliable on mobile, and it kills the back/forward cache) and leaves both calls
+best-effort. Be clear-eyed about it: `leave()` cannot *finish* during unload. Its value is stopping
+the local tracks and getting an explicit leave frame to the SFU.
 
 **The member pickers find no users** — check the app setting `user_search_disallowed_roles` doesn't
 include `proctor`. The pickers use chat's `queryUsers` with a role filter, and that setting blocks

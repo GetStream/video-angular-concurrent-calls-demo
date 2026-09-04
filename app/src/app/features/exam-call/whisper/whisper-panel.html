@@ -1,0 +1,61 @@
+<!-- The scrim is part of the design: while the channel is open, the two buttons below are
+     the only controls that apply - the exam call's own microphone is not yours to change
+     until every proctor is back with the students. -->
+<div class="scrim">
+  <section class="card" role="dialog" aria-modal="true" aria-labelledby="whisper-title">
+    <header class="card__head">
+      <span class="card__badge">
+        <mat-icon>record_voice_over</mat-icon>
+      </span>
+      <h2 class="card__title" id="whisper-title">Whispering to proctors</h2>
+    </header>
+
+    <p class="card__lede">Students can't hear you, just the other proctors.</p>
+
+    @if (micLive()) {
+      <p class="live" role="status">
+        <mat-icon>mic</mat-icon>
+        MIC LIVE IN WHISPER
+      </p>
+    } @else {
+      <p class="muted">
+        <mat-icon>mic_off</mat-icon>
+        You're listening only - the other proctors can't hear you.
+      </p>
+    }
+
+    <div class="proctors">
+      @for (other of others(); track other.sessionId) {
+        <span
+          class="proctors__chip"
+          [class.proctors__chip--speaking]="isSpeaking(other)"
+          [class.proctors__chip--muted]="!isAudible(other)"
+        >
+          <span class="proctors__avatar">{{ initials(label(other)) }}</span>
+          {{ label(other) }}
+          @if (!isAudible(other)) {
+            <mat-icon class="proctors__mic">mic_off</mat-icon>
+          }
+        </span>
+      } @empty {
+        <span class="proctors__empty">No other proctors are in the channel yet.</span>
+      }
+    </div>
+
+    <div class="card__actions">
+      <button matButton="outlined" type="button" (click)="session().toggleMic()">
+        <mat-icon>{{ micLive() ? 'mic_off' : 'mic' }}</mat-icon>
+        {{ micLive() ? 'Mute' : 'Unmute' }}
+      </button>
+
+      <button matButton="filled" type="button" class="card__back" (click)="session().end()">
+        <mat-icon>arrow_back</mat-icon>
+        Go back to students
+      </button>
+    </div>
+
+    <!-- Not a nicety: leaving is global, so nobody is ever left unmuted to the students
+         while a colleague is still whispering. -->
+    <p class="card__note">Going back takes every proctor out of the channel.</p>
+  </section>
+</div>
