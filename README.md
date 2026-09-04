@@ -151,7 +151,10 @@ Two browser profiles is enough for most of it; the whisper channel wants three.
    every student tile carries quality bars. Take a client offline in devtools and the call stays
    on screen under a _"You're offline"_ banner rather than resetting to a spinner.
 7. **End exam** ends both calls for everyone.
-8. **Recordings**: back in the lobby, the header now has a **Recordings** link (proctors only).
+8. **Settings**: the gear in the control bar opens the same device pickers and background choice
+   the lobby showed. Switch microphone mid-call and nothing drops; for a proctor the choice is
+   applied to the whisper channel too, because device state is per-call.
+9. **Recordings**: back in the lobby, the header now has a **Recordings** link (proctors only).
    It lists the calls you were on; press **Fetch recordings** on one to ask that call for its
    recordings. The whisper channel's rows are marked, and they will be longer than the exam's —
    `auto-on` records the whole channel, not just the whispering.
@@ -367,6 +370,39 @@ Background blur wires [`@stream-io/video-filters-web`](https://www.npmjs.com/pac
 straight to `camera.registerFilter()`, which is what React's `BackgroundFiltersProvider` reduces to.
 `isMediaPipePlatformSupported()` gates the control entirely, and because the instance is shared the
 filter survives the transition into the call.
+
+### One set of device pickers, two places
+
+The microphone / camera / speaker selects and the background choice live in
+[`DeviceControls`](./app/src/app/shared/components/device-controls/device-controls.ts), used by the
+lobby and by the in-call **Settings** dialog — so "the same pickers" is the same component, not a
+copy that drifts. The lobby wraps it in a camera preview and mute toggles; in a call your own tile is
+already on screen, so the dialog has no preview.
+
+Three decisions in there are worth the words:
+
+- **Selection has to reach every call the user holds.** `MicrophoneManager` and `SpeakerManager`
+  state is per-`Call`, and a proctor is in two calls at once. Choosing a headset on only the exam
+  call would leave the whisper channel capturing from the old microphone and half the audio playing
+  out of the old output, so the dialog passes the whisper call as a `mirrorTo` target and mic and
+  speaker selection is applied to both. The **camera is deliberately not mirrored**: the whisper
+  call has `video.enabled: false` and never publishes video, which is also why the background filter
+  registers on the exam call only.
+- **Selecting a device on a muted call is still worth doing.** `select()` on a disabled microphone
+  stores the choice without acquiring anything, so the next unmute uses the device the user picked
+  rather than the system default.
+- **The dialog is a plain `MatDialog` on the app's light surface, over the dark call UI**, and that
+  is deliberate rather than an oversight. `mat-select` renders its panel in a CDK overlay attached
+  to the body, outside the dialog's DOM, so it takes the _application_ theme no matter what the
+  dialog looks like. Restyling the dialog dark by hand would leave every dropdown it opens light — a
+  fight only winnable with global CSS reaching into Material internals. A settings sheet floating
+  over the call reads as a system surface, which is what it is.
+
+One small piece of Material trivia that cost a screenshot: an outlined `mat-form-field`'s floating
+label is positioned _above_ its own border box, so the first field's label is clipped whenever the
+controls sit at the top of a container that scrolls — which `mat-dialog-content` is. The overhang is
+reserved inside `DeviceControls` itself, so it is fixed wherever the controls are mounted instead of
+each host having to out-specify Material's own dialog padding rule.
 
 **The member pickers use `queryUsers`, not the seeded JSON**, so the search field has something
 real to do and the demo shows the API a customer would actually reach for:

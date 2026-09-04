@@ -13,19 +13,20 @@ import {
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatSelectModule } from '@angular/material/select';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { createSoundDetector, type Call } from '@stream-io/video-client';
 import { distinctUntilChanged, of, switchMap } from 'rxjs';
-import { BackgroundFilter, type BackgroundChoice } from '../../../core/stream/background-filter';
+import { BackgroundFilter } from '../../../core/stream/background-filter';
 import { DevicePreferences } from '../../../core/stream/device-preferences';
 import { Notifier } from '../../../core/errors/notifier';
+import { DeviceControls } from '../../../shared/components/device-controls/device-controls';
 
 /**
- * Camera preview, device pickers and background blur - the left column of the lobby,
- * identical on both tabs so switching between them never disturbs your setup.
+ * Camera preview and mute toggles - the left column of the lobby, identical on both tabs so
+ * switching between them never disturbs your setup.
+ *
+ * The pickers themselves live in `DeviceControls`, shared with the in-call settings dialog,
+ * so there is exactly one implementation of "choose a microphone" in the app.
  *
  * The preview deliberately assigns `camera.state.mediaStream` to the element rather than
  * using `bindVideoElement`: that binding is for *joined* participants and drives track
@@ -34,14 +35,7 @@ import { Notifier } from '../../../core/errors/notifier';
  */
 @Component({
   selector: 'app-device-setup',
-  imports: [
-    MatButtonModule,
-    MatFormFieldModule,
-    MatIconModule,
-    MatProgressSpinnerModule,
-    MatSelectModule,
-    MatTooltipModule,
-  ],
+  imports: [MatButtonModule, MatIconModule, MatTooltipModule, DeviceControls],
   templateUrl: './device-setup.html',
   styleUrl: './device-setup.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -64,19 +58,6 @@ export class DeviceSetup {
    */
   private readonly call$ = toObservable(this.call);
 
-  protected readonly cameras = toSignal(
-    this.call$.pipe(switchMap((call) => (call ? call.camera.listDevices() : of([])))),
-    { initialValue: [] as MediaDeviceInfo[] },
-  );
-  protected readonly mics = toSignal(
-    this.call$.pipe(switchMap((call) => (call ? call.microphone.listDevices() : of([])))),
-    { initialValue: [] as MediaDeviceInfo[] },
-  );
-  protected readonly speakers = toSignal(
-    this.call$.pipe(switchMap((call) => (call ? call.speaker.listDevices() : of([])))),
-    { initialValue: [] as MediaDeviceInfo[] },
-  );
-
   protected readonly cameraStatus = toSignal(
     this.call$.pipe(
       switchMap((call) => (call ? call.camera.state.optimisticStatus$ : of(undefined))),
@@ -93,14 +74,18 @@ export class DeviceSetup {
   );
   protected readonly cameraPermission = toSignal(
     this.call$.pipe(
-      switchMap((call) => (call ? call.camera.state.browserPermissionState$ : of('prompt' as const))),
+      switchMap((call) =>
+        call ? call.camera.state.browserPermissionState$ : of('prompt' as const),
+      ),
       distinctUntilChanged(),
     ),
     { initialValue: 'prompt' as const },
   );
   protected readonly micPermission = toSignal(
     this.call$.pipe(
-      switchMap((call) => (call ? call.microphone.state.browserPermissionState$ : of('prompt' as const))),
+      switchMap((call) =>
+        call ? call.microphone.state.browserPermissionState$ : of('prompt' as const),
+      ),
       distinctUntilChanged(),
     ),
     { initialValue: 'prompt' as const },
@@ -112,42 +97,8 @@ export class DeviceSetup {
     () => this.cameraPermission() === 'denied' || this.micPermission() === 'denied',
   );
 
-  /** Output device selection isn't supported in every browser; hide the picker if not. */
-  protected readonly canPickSpeaker = computed(
-    () => this.call().speaker.state.isDeviceSelectionSupported,
-  );
-
-  /**
-   * Read the *SDK's* current selection, not just our stored preference: with nothing
-   * stored the SDK still picks a system default when the device is enabled, and a picker
-   * showing blank while the camera is visibly running is just wrong.
-   */
-  protected readonly selectedCamera = toSignal(
-    this.call$.pipe(
-      switchMap((call) => (call ? call.camera.state.selectedDevice$ : of(undefined))),
-      distinctUntilChanged(),
-    ),
-    { initialValue: undefined },
-  );
-  protected readonly selectedMic = toSignal(
-    this.call$.pipe(
-      switchMap((call) => (call ? call.microphone.state.selectedDevice$ : of(undefined))),
-      distinctUntilChanged(),
-    ),
-    { initialValue: undefined },
-  );
-  protected readonly selectedSpeaker = toSignal(
-    this.call$.pipe(
-      switchMap((call) => (call ? call.speaker.state.selectedDevice$ : of(undefined))),
-      distinctUntilChanged(),
-    ),
-    { initialValue: undefined },
-  );
-
-  protected readonly blurSupported = this.background.supported;
+  /** Only the stage badge needs this; the picker itself is in `DeviceControls`. */
   protected readonly blurChoice = this.background.choice;
-  protected readonly blurLoading = this.background.loading;
-  protected readonly blurDegraded = this.background.degraded;
 
   /** 0-100, driven by the mic's own stream so the meter works before joining. */
   protected readonly micLevel = signal(0);
@@ -175,11 +126,9 @@ export class DeviceSetup {
         this.micLevel.set(0);
         return;
       }
-      const stop = createSoundDetector(
-        stream,
-        ({ audioLevel }) => this.micLevel.set(audioLevel),
-        { detectionFrequencyInMs: 100 },
-      );
+      const stop = createSoundDetector(stream, ({ audioLevel }) => this.micLevel.set(audioLevel), {
+        detectionFrequencyInMs: 100,
+      });
       onCleanup(() => void stop());
     });
 
@@ -214,37 +163,5 @@ export class DeviceSetup {
       { what: on ? 'Turning on your microphone' : 'Turning off your microphone' },
     );
     if (result.ok) this.prefs.setMicOn(on);
-  }
-
-  protected async selectCamera(deviceId: string): Promise<void> {
-    const result = await this.notifier.attempt(() => this.call().camera.select(deviceId), {
-      what: 'Switching camera',
-    });
-    if (result.ok) this.prefs.selectCamera(deviceId);
-  }
-
-  protected async selectMic(deviceId: string): Promise<void> {
-    const result = await this.notifier.attempt(() => this.call().microphone.select(deviceId), {
-      what: 'Switching microphone',
-    });
-    if (result.ok) this.prefs.selectMic(deviceId);
-  }
-
-  protected async selectSpeaker(deviceId: string): Promise<void> {
-    // SpeakerManager.select is synchronous, unlike the camera and microphone managers -
-    // there is no track to re-acquire, only a sinkId to set on the bound audio elements.
-    const result = await this.notifier.attempt(
-      async () => this.call().speaker.select(deviceId),
-      { what: 'Switching speaker' },
-    );
-    if (result.ok) this.prefs.selectSpeaker(deviceId);
-  }
-
-  protected async setBackground(choice: BackgroundChoice): Promise<void> {
-    await this.background.apply(this.call(), choice);
-  }
-
-  protected deviceLabel(device: MediaDeviceInfo, fallback: string): string {
-    return device.label || `${fallback} ${device.deviceId.slice(0, 6)}`;
   }
 }

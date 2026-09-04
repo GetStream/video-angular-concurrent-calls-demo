@@ -104,12 +104,6 @@
     background: var(--mat-sys-primary);
     transition: width 90ms linear;
   }
-
-  &__controls {
-    display: flex;
-    flex-direction: column;
-    gap: 0.625rem;
-  }
 }
 
 .toggle {
@@ -119,39 +113,5 @@
   &--off {
     background: var(--mat-sys-error);
     --mat-icon-button-icon-color: var(--mat-sys-on-error);
-  }
-}
-
-.bg {
-  display: flex;
-  flex-direction: column;
-  gap: 0.375rem;
-
-  &__label {
-    font: var(--mat-sys-label-medium);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--mat-sys-on-surface-variant);
-  }
-
-  &__options {
-    display: flex;
-    gap: 0.5rem;
-  }
-
-  &__option {
-    border: 1px solid var(--mat-sys-outline-variant);
-
-    &--active {
-      border-color: var(--mat-sys-primary);
-      background: var(--mat-sys-primary-container);
-      color: var(--mat-sys-on-primary-container);
-    }
-  }
-
-  &__warn {
-    margin: 0;
-    font: var(--mat-sys-body-small);
-    color: var(--mat-sys-error);
   }
 }

@@ -9,6 +9,7 @@ import {
   signal,
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { OwnCapability } from '@stream-io/video-client';
@@ -18,11 +19,19 @@ import { RecordingToggle } from '../../../shared/components/recording-toggle/rec
 import { DevicePreferences } from '../../../core/stream/device-preferences';
 import type { CallFacade } from '../../../core/stream/call-facade';
 import type { WhisperSession } from '../whisper/whisper-session';
+import { SettingsDialog, type SettingsDialogData } from '../settings-dialog/settings-dialog';
 
 /** The bar along the bottom of both call layouts. */
 @Component({
   selector: 'app-control-bar',
-  imports: [MatButtonModule, MatIconModule, MatTooltipModule, CaptionsToggle, RecordingToggle],
+  imports: [
+    MatButtonModule,
+    MatDialogModule,
+    MatIconModule,
+    MatTooltipModule,
+    CaptionsToggle,
+    RecordingToggle,
+  ],
   templateUrl: './control-bar.html',
   styleUrl: './control-bar.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -40,6 +49,7 @@ export class ControlBar {
 
   private readonly notifier = inject(Notifier);
   private readonly prefs = inject(DevicePreferences);
+  private readonly dialog = inject(MatDialog);
 
   protected readonly micOn = computed(() => this.exam().micOn());
   protected readonly cameraOn = computed(() => this.exam().cameraOn());
@@ -64,6 +74,23 @@ export class ControlBar {
   constructor() {
     const timer = setInterval(() => this.now.set(Date.now()), 1000);
     inject(DestroyRef).onDestroy(() => clearInterval(timer));
+  }
+
+  /**
+   * The same pickers the lobby shows, over the call.
+   *
+   * A proctor's whisper call is passed as a mirror target, not as a second set of controls:
+   * microphone and speaker selection is per-`Call`, so choosing a headset here has to reach
+   * both calls or half the audio keeps using the old device.
+   */
+  protected openSettings(): void {
+    const whisperCall = this.whisper()?.whisper.call;
+    this.dialog.open<SettingsDialog, SettingsDialogData>(SettingsDialog, {
+      data: { call: this.exam().call, mirrorTo: whisperCall ? [whisperCall] : [] },
+      width: '25rem',
+      autoFocus: 'dialog',
+      restoreFocus: true,
+    });
   }
 
   /**

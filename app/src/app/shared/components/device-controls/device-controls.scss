@@ -1,0 +1,50 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  /* An outlined field's floating label is positioned *above* its own border box by about
+     8px, so the first field's label is clipped whenever this sits at the top of a
+     container that scrolls - which is exactly what `mat-dialog-content` is. Reserving the
+     overhang here fixes it wherever these controls are mounted, rather than each host
+     having to out-specify Material's own dialog padding rule. */
+  padding-top: 0.5rem;
+}
+
+.bg {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+
+  &__label {
+    font: var(--mat-sys-label-medium);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  &__options {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  &__option {
+    border: 1px solid var(--mat-sys-outline-variant);
+
+    &--active {
+      border-color: var(--mat-sys-primary);
+      background: var(--mat-sys-primary-container);
+      color: var(--mat-sys-on-primary-container);
+    }
+  }
+
+  &__warn {
+    margin: 0;
+    font: var(--mat-sys-body-small);
+    color: var(--mat-sys-error);
+  }
+}
