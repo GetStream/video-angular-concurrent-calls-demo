@@ -22,8 +22,9 @@ type DeviceStatus = 'enabled' | 'disabled' | undefined;
  * exam call and the whisper call) and they must tear down together. The `Injector` passed in
  * is the route's, so every subscription dies when the route does.
  *
- * Consumption rule for the whole app: template state comes from `toSignal` here (or, in a
- * couple of library-shaped spots, from `| async`). Never `obs.subscribe(v => this.x = v)` -
+ * Consumption rule for the whole app: template state comes from `toSignal` here. `| async` would
+ * be equally correct - it calls `markForCheck()` - but one paradigm is easier to hold to, and
+ * `toSignal` gives `computed()` for free. What is never acceptable is `obs.subscribe(v => this.x = v)` -
  * that marks nothing dirty, so with OnPush the view silently never refreshes. It *looks*
  * fine under Default change detection because zone.js ticks anyway, which is exactly how it
  * breaks the moment a component becomes OnPush - and OnPush is the CLI default.

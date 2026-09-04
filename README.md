@@ -14,24 +14,6 @@ The scenario is a **proctored exam call**:
 
 ---
 
-## Status
-
-Built in steps. Right now:
-
-| Step | State |
-|---|---|
-| 1. Server-side setup script | **Done** — runs and verifies clean |
-| 2. Angular app skeleton (config, services, directives, routing) | **Done** — builds, tests and serves |
-| 3. User picker | **Done** — connects both Stream clients and routes to the lobby |
-| 4. Lobby + exam call | **Done** — device setup, background blur, member pickers, both call layouts |
-| 5. Chat in the exam call | **Done** — one room per call, stock components, dark theme |
-| 6. Proctors-only whisper channel | **Done** — shared mode over custom events, verified across four clients |
-| 7. Recording, captions, network + connection status | **Done** — capability-gated toggles, live status indicators |
-
-`npm run setup`, `npm start`, `npm run build` and `npm test` all work.
-
----
-
 ## Prerequisites
 
 - **Node.js 24.20.0** — pinned in `.nvmrc`. Angular CLI 22 requires ≥ 24.15.0 (or ≥ 22.22.3)
@@ -41,8 +23,26 @@ Built in steps. Right now:
   nvm install   # reads .nvmrc
   nvm use
   ```
+
 - A **Stream app** with Video and Chat enabled, and its **API key + secret** from the
   [dashboard](https://dashboard.getstream.io).
+
+  > **Use an empty app, or one created for this demo.** The setup script does not only _add_
+  > things — it **rewrites** configuration that is global to the Stream app. Point it at a
+  > production app and it will change how that app behaves. Details in
+  > [What it changes in your Stream app](#what-it-changes-in-your-stream-app).
+
+**Install the dependencies.** `npm run setup` installs `setup/`, but the Angular app is a
+separate workspace:
+
+```bash
+npm --prefix app install
+```
+
+`app/.npmrc` pins `legacy-peer-deps=true`, and that is deliberate rather than laziness:
+`stream-chat-angular` pulls in `ngx-float-ui`, which has no Angular 22 build yet, so npm's peer
+resolution fails without it. Stream documents exactly this flag for Angular 22. It lives in
+`.npmrc` rather than in a remembered CLI flag so every install behaves the same.
 
 ---
 
@@ -51,6 +51,13 @@ Built in steps. Right now:
 The setup script is server-side and runs once. It creates the roles, wires their capabilities onto
 the call types and the chat channel type, seeds the fixed cast of users, and mints the tokens the
 browser app reads at startup.
+
+> **⚠️ Point this at an empty Stream app.** Some of what it writes is **global to the app**, not
+> scoped to this demo: it rewrites the grants _and settings_ of the built-in `default` and
+> `audio_room` call types, the grants of the `messaging` channel type, and the app-level grants of
+> the roles it creates. Anything else using that Stream app inherits every one of those changes.
+> The full list is in [What it changes in your Stream app](#what-it-changes-in-your-stream-app) — read it
+> before running this against an app you care about.
 
 **1. Add your credentials.**
 
@@ -82,7 +89,7 @@ It is **idempotent** — safe to run as often as you like. Existing roles are re
 npm run verify
 ```
 
-This reads the live server state back and asserts 27 things: the app-level grants, both call types'
+This reads the live server state back and asserts 38 things: the app-level grants, both call types'
 grants and settings, the chat channel-type grants, and the 14 seeded users. It also asserts that
 `disable_permissions_checks` is `false` — if that flips on, every access-control guarantee below
 silently stops being enforced and the demo would prove nothing.
@@ -104,9 +111,10 @@ All checks passed
 ## Running the app
 
 ```bash
-npm start        # dev server on http://localhost:4200
-npm run build    # production build
-npm test         # unit tests (Vitest)
+npm --prefix app install   # once, if you haven't already
+npm start                  # dev server on http://localhost:4200
+npm run build              # production build
+npm test                   # unit tests (Vitest)
 ```
 
 The app reads `public/demo-config.json` at startup through `provideAppInitializer`, so it will not
@@ -124,24 +132,24 @@ Two browser profiles is enough for most of it; the whisper channel wants three.
 1. **Proctor**: pick `proctor-john`, set up camera and mic (background blur is optional), leave all
    ten students selected, add a second proctor, then **Start exam call**. Copy the link.
 2. **Student**: open the link in another profile, pick `student-tom`, join. The camera is forced on
-   for the exam; press **Share screen** and choose *Entire screen*. The proctor's column for that
+   for the exam; press **Share screen** and choose _Entire screen_. The proctor's column for that
    student turns from red to live.
 3. **Chat**: the room is open by default on both sides — same channel, created beside the call with
    the same roster.
 4. **Whisper**: as a proctor, press **Whisper**. Every proctor's panel opens and every proctor's exam
    mic mutes, so the student hears nothing; only whoever pressed it is audible to the others. Anyone
-   can unmute inside the panel. **Go back to students** takes *everyone* out and restores each
+   can unmute inside the panel. **Go back to students** takes _everyone_ out and restores each
    proctor's own previous mic state. Two things worth trying: bring a third proctor in while the
    first two are whispering — they arrive with the panel already up and their mic already muted,
    having received no event — and then have everyone mute themselves in the panel. The channel goes
-   silent and *nobody* drops out of it, because only **Go back to students** ends it.
+   silent and _nobody_ drops out of it, because only **Go back to students** ends it.
 5. **Recording and captions**: as a proctor, the record and `CC` buttons appear in the control
    bar; a student's do not, because the buttons render off `own_capabilities` rather than off a
    role check. Start recording and the `REC` badge appears in **everyone's** header — the
    indicator is deliberately not capability-gated.
 6. **Connection status**: your own connection quality and round-trip time sit in the header, and
    every student tile carries quality bars. Take a client offline in devtools and the call stays
-   on screen under a *"You're offline"* banner rather than resetting to a spinner.
+   on screen under a _"You're offline"_ banner rather than resetting to a spinner.
 7. **End exam** ends both calls for everyone.
 
 Background-filter models (~26 MB) are copied into `app/public/mediapipe/` by a `postinstall` hook,
@@ -155,16 +163,50 @@ gitignored.
 Source: [`setup/src/setup.ts`](./setup/src/setup.ts), with the role model in
 [`grants.ts`](./setup/src/grants.ts) and the cast in [`cast.ts`](./setup/src/cast.ts).
 
+### What it changes in your Stream app
+
+Read this before pointing the script at a Stream app you care about. It is idempotent and it
+read-modify-writes rather than replacing wholesale, but some of what it writes is **global to the
+app** rather than scoped to this demo.
+
+**Global to the Stream app** — anything else using this app sees these:
+
+| Change                                                                                                                                                                                                                            | Scope                                              |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
+| Grants for `default` and `audio_room` — the `call_member_proctor` / `call_member_student` / `proctor` / `student` entries                                                                                                         | those two **built-in call types**                  |
+| Settings for `default`: publish resolution pinned to **1280×720 @ 1.5 Mbps**, camera and mic off on join, screen sharing on, recording `available` at 1080p, transcription and closed captions `available` in `en`, backstage off | the built-in `default` call type                   |
+| Settings for `audio_room`: recording **`auto-on`**, audio-only, 720p; video and screen sharing disabled; mic off on join and the request-to-speak flow disabled; backstage off                                                    | the built-in `audio_room` call type                |
+| Grants for `proctor` and `student` on the `messaging` channel type                                                                                                                                                                | that **chat channel type**                         |
+| App-level grants for the `proctor` and `student` roles                                                                                                                                                                            | app-wide role config                               |
+| Four custom roles created: `student`, `proctor`, `call_member_proctor`, `call_member_student`                                                                                                                                     | app-wide (a Stream app allows **25** custom roles) |
+| 14 users upserted, each with a **non-expiring** token                                                                                                                                                                             | app-wide user list                                 |
+
+**Deliberately left alone:** the built-in `user`, `admin`, `host`, `moderator` and `call_member`
+roles keep their call-type grants untouched, and the app-level grant map is read-modify-written so
+no other role's entries are dropped. Nothing is ever _revoked_ from `user` — the access-control
+design (see below) is built so that it never has to be.
+
+It also writes nothing it was not asked to: `updateCallType` requires `video.target_resolution`
+even on a partial update (omit it and the server reads 0×0 and rejects the request), and
+`updateChannelType` requires `automod`, `automod_behavior` and `max_message_length` even when you
+only want to change grants — so the script reads the current values and carries them forward rather
+than guessing defaults and silently reconfiguring moderation.
+
+Two settings the script deliberately does not change, and which it asserts instead:
+`disable_permissions_checks` must be `false` — every access-control guarantee in this README is
+vacuous if it flips — and `user_search_disallowed_roles` must not include `proctor`, or the
+member pickers silently return nothing.
+
 ### 1. Four roles
 
-| Role | Scope | Capabilities |
-|---|---|---|
-| `student` | application-level | **none** |
-| `proctor` | application-level | `create-call` **only** |
+| Role                  | Scope                          | Capabilities                             |
+| --------------------- | ------------------------------ | ---------------------------------------- |
+| `student`             | application-level              | **none**                                 |
+| `proctor`             | application-level              | `create-call` **only**                   |
 | `call_member_proctor` | call-level (a member's `role`) | the proctor's in-call set, per call type |
 | `call_member_student` | call-level (a member's `role`) | the student's in-call set, per call type |
 
-The split is the point. The application-level role decides only *whether you may start a call*;
+The split is the point. The application-level role decides only _whether you may start a call_;
 everything you can do **inside** a call comes from your **membership** role. Because neither
 app-level role carries `join-call`, **call membership is the access-control list and it is enforced
 server-side** — a student who was never added to an exam cannot join it, and no student can reach
@@ -230,11 +272,183 @@ Everything the browser needs is written to **`app/public/demo-config.json`**:
 {
   "apiKey": "…",
   "generatedAt": "2026-09-04T09:27:52.162Z",
-  "users": [{ "id": "proctor-john", "name": "John", "role": "proctor", "token": "…" }]
+  "users": [
+    { "id": "proctor-john", "name": "John", "role": "proctor", "token": "…" }
+  ]
 }
 ```
 
 That file is **gitignored** — it holds non-expiring user tokens.
+
+---
+
+## Architecture: the Angular ↔ RxJS seam
+
+There is no Angular Video SDK. `@stream-io/video-client` is framework-agnostic and exposes its
+state as RxJS observables and its media binding as imperative calls that return teardown
+functions. Everything below is about that one seam, and it is the part of this demo worth copying.
+
+### `CallFacade` — one signal view over one call
+
+[`core/stream/call-facade.ts`](./app/src/app/core/stream/call-facade.ts) turns a `Call`'s
+observables into signals, and it is a **plain instantiable class rather than a service**: a proctor
+holds two calls at once (the exam call and the whisper channel), and both must tear down together.
+It takes the route's `Injector` explicitly, so every subscription behind it dies when the route
+does.
+
+**The consumption rule for the whole app: template state comes from `toSignal`.** Three paths
+differ, and the difference is easy to miss:
+
+- `toSignal(obs)` marks consumers dirty through the signal graph.
+- `obs | async` calls `markForCheck()`, which flags the ancestor chain.
+- `obs.subscribe(v => this.x = v)` marks **nothing**. Under OnPush the view simply never refreshes.
+
+The last one _looks_ fine under default change detection, because zone.js ticks anyway — which is
+exactly how it breaks the moment someone flips a component to OnPush. And OnPush is the Angular CLI
+default.
+
+Held to literally, that leaves the app with **two** bare `.subscribe()` calls in the whole
+codebase, both in the whisper session and neither feeding a template: the latch that puts you into
+whisper mode when you hear the channel, and the queue that serialises microphone hand-offs. Media
+binding is an `effect` in a directive, preference persistence is an `effect`, and everything a
+template reads — device lists, `browserPermissionState$`, device status — goes through `toSignal`.
+
+Two details inside the facade that are load-bearing rather than tidy:
+
+- **`distinctUntilChanged()` before every `toSignal`.** The client throttles nothing, and
+  `audioLevelChanged` patches every participant's audio level on every event. Filtering here means
+  a frame that changes nothing writes no signal and marks no component dirty.
+- **`callStatsReport$` is subscribed unconditionally.** The SDK's stats poller short-circuits
+  unless something is observing it, so a lazily-subscribed latency badge would silently read zero
+  forever.
+
+Capabilities always come from `ownCapabilities$`, never from a cached join response: the observable
+merges the coordinator's list with the SFU's grants.
+
+### Directives, not templates, for media
+
+The binding API is imperative and returns teardown functions, which makes directives the right
+seam — [`shared/directives/`](./app/src/app/shared/directives):
+
+| Directive           | Wraps                                         | Why it matters                                                                                                                                                               |
+| ------------------- | --------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `[appVideoTrack]`   | `bindVideoElement` + `trackElementVisibility` | `bindVideoElement` also drives dynascale: it observes the element's real size and asks the SFU for a matching layer. That is what makes ten students × two tracks affordable |
+| `[appAudioTrack]`   | `bindAudioElement`                            | audio is subscribed whether or not an element is bound, so _not_ binding gives you a call that looks fine and is silent                                                      |
+| `[appCallViewport]` | `setViewport`                                 | on the scrolling container: unsubscribes off-screen columns, and keeps the sort from reshuffling tiles you are looking at                                                    |
+
+Remote audio lives in a **permanently mounted, visually hidden** `<app-audio-sink>` rather than
+inside each tile: audio has to keep playing for people with no tile on screen, and a
+conditionally-rendered element drops the first moment of speech every time it appears.
+
+### The lobby never joins a call
+
+Device managers are constructed eagerly in the `Call` constructor and publishing is gated on
+`callingState === JOINED`, so the lobby needs no server round-trip at all: `camera.enable()` there
+just acquires a local stream. The lobby and the call route then share the _same_ `Call` instance
+via `reuseInstance`, which is the whole handoff — camera already running, background filter already
+registered, nothing re-acquired and no flicker.
+
+Background blur wires [`@stream-io/video-filters-web`](https://www.npmjs.com/package/@stream-io/video-filters-web)
+straight to `camera.registerFilter()`, which is what React's `BackgroundFiltersProvider` reduces to.
+`isMediaPipePlatformSupported()` gates the control entirely, and because the instance is shared the
+filter survives the transition into the call.
+
+**The member pickers use `queryUsers`, not the seeded JSON**, so the search field has something
+real to do and the demo shows the API a customer would actually reach for:
+
+```ts
+const { users } = await chat.queryUsers(
+  { role: "student", ...(term ? { name: { $autocomplete: term } } : {}) },
+  { name: 1 },
+  { limit: 25 },
+  { signal: abortSignal }, // RequestOptions carries an AbortSignal
+);
+```
+
+Two things about that: `queryUsers` lives on the **chat** client (the video client has no such
+method), and **`role` is not in the `UserFilters` TypeScript type** even though the API supports
+filtering on it — so the filter object is cast, with a comment saying why, rather than inventing a
+parallel custom field. Each picker is an Angular `resource()` with a debounced `term` as its
+params, which hands the loader an `abortSignal` and gives `isLoading` / `error` states for free.
+Selection is kept as separate state from results, so ticks survive re-querying.
+
+### Three things that bite
+
+- **`reuseInstance` is not optional.** Without `client.call(type, id, { reuseInstance: true })`,
+  re-entering a call route builds a _second_ `Call` for the same cid; the store swaps its entry and
+  orphans the first while it is still joined — live socket, live microphone, no UI attached. It is
+  also what lets the lobby's call object flow into the call route with its camera already running.
+- **The SDK's device persistence is per-_client_, not per-call.** It keys the selected device _and
+  the mute state_ on one `localStorage` entry shared by every `Call`, so the whisper call muting its
+  microphone would write `muted: true` into the entry the exam call reads back. The client is
+  constructed with `devicePersistence: { enabled: false }` and
+  [`DevicePreferences`](./app/src/app/core/stream/device-preferences.ts) owns that state instead.
+- **`leave()` is terminal.** `join()` throws _"call.join() shall be called only once"_ on a reused
+  instance, so returning to the lobby after a call must request a fresh one.
+
+### Every SDK call reports its failure
+
+There is one wrapper, and everything goes through it —
+[`Notifier.attempt()`](./app/src/app/core/errors/notifier.ts):
+
+```ts
+const result = await notifier.attempt(() => call.join(), {
+  what: "Joining the exam call",
+});
+if (!result.ok) {
+  /* … */
+}
+```
+
+It returns a discriminated result rather than throwing, so call sites handle the outcome explicitly
+instead of relying on an ambient `try`/`catch`, and it reports as a side effect: a snackbar for
+something you can continue past, a `fatal` signal that a route renders instead of its content for
+something you cannot. A cancelled screen-share picker (`NotAllowedError`) and a superseded
+autocomplete request (`AbortError`) are treated as expected outcomes rather than failures — a
+reference app that cries wolf teaches the wrong thing, and so does one that swallows errors.
+
+### Change detection, and why zone.js is still here
+
+`stream-chat-angular` does not support zoneless, so the app is scaffolded with `--zoneless=false`
+and keeps `provideZoneChangeDetection({ eventCoalescing: true })`. zone.js patches `WebSocket`, so
+every SFU frame ends in an `ApplicationRef.tick()`. That tick is cheap because of two things, and
+**neither of them is `runOutsideAngular`**:
+
+1. Every component is OnPush — the CLI default, so it costs nothing to hold to. A tick with no
+   dirty component is a tree walk with no template work.
+2. The `distinctUntilChanged` filtering above, so frames that change nothing dirty nothing.
+
+`runOutsideAngular` would be actively harmful in a reference app: outside the zone, a bare
+`.subscribe()` into a field goes silently stale, which is precisely the pattern to discourage.
+
+### Chat alongside video
+
+Two SDKs, two clients, two websockets for one user — that is the documented pattern. The exam
+channel reuses the call id, and its members are the call's members, so the people who can join the
+call are exactly the people who can read the room.
+
+The panel watches the channel itself rather than calling `ChannelService.init()`:
+
+```ts
+await channel.watch(); // mandatory — setAsActiveChannel issues no request
+channelService.setAsActiveChannel(channel);
+```
+
+`init()` is skipped deliberately: its websocket list handlers ignore your filter, so an unrelated
+`notification.message_new` can swap the active channel out from under a call-scoped panel.
+
+Three smaller things: `name` is a **custom** channel field in `stream-chat` v9, so setting it needs
+a `CustomChannelData` module augmentation; the dark theme is owned by `ThemeService`, not by CSS
+(see Troubleshooting); and the chat SDK lands in the **initial** bundle rather than the lazy call
+route, because the route guard reaches `CurrentUser` → `ChatClient` → the `stream-chat-angular`
+barrel. Splitting it would mean moving chat connection out of sign-in, which complicates the very
+flow the demo exists to show, so the budget was raised deliberately instead.
+
+### If you are on Angular Universal
+
+`@stream-io/video-client` imports `webrtc-adapter` for side effects, and it touches `window` at
+import time. This app is `--ssr=false` so it never comes up here, but a server-rendered app needs
+to keep the client out of the server bundle.
 
 ---
 
@@ -244,14 +458,14 @@ The one part of this demo that is genuinely hard, and the reason it is worth rea
 
 A proctor is joined to **two calls at once**: the exam call (`default:<callId>`) and a proctors-only
 audio channel (`audio_room:<callId>`, same id). One `StreamVideoClient` holds both — it tracks a
-*list* of calls with no "active call" concept, and the join-once guard is per-`Call` instance.
+_list_ of calls with no "active call" concept, and the join-once guard is per-`Call` instance.
 Both are created together in the lobby, so their rosters cannot drift, and students are never
-members of the second one. Nothing is stored in either call's `custom` data — the call *type* is what
+members of the second one. Nothing is stored in either call's `custom` data — the call _type_ is what
 tells them apart, so a `mode` field would carry no information, and `getOrCreate` overwrites custom
 data on an existing call, so writing one would also be a small hazard.
 
-**Mode is global to the call, not per-user.** One proctor pressing *Whisper* puts every proctor into
-the channel; one proctor pressing *Go back to students* takes every proctor out and mutes every
+**Mode is global to the call, not per-user.** One proctor pressing _Whisper_ puts every proctor into
+the channel; one proctor pressing _Go back to students_ takes every proctor out and mutes every
 whisper microphone. That symmetry is the whole safety argument: there is never a moment where one
 proctor is unmuted to the students while colleagues are still whispering, so no whisper audio can
 reach a student through an open exam microphone. Every proctor in the channel is muted in the exam
@@ -261,19 +475,19 @@ It is signalled **two ways, on purpose**:
 
 1. **A custom WS event** (`sendCustomEvent({ type: 'whisper.start' | 'whisper.end', by, at })`) is the
    fast path. It arrives on every watching client as the SDK event named `'custom'`, with the payload
-   under `event.custom` — so the discriminator has to live *inside* the payload, not in the event name.
+   under `event.custom` — so the discriminator has to live _inside_ the payload, not in the event name.
    The sender is not echoed its own event, so the initiator applies its change optimistically and the
    handler is idempotent; the `at` timestamp stops a late `whisper.start` resurrecting a mode someone
    just closed.
 2. **Anyone already publishing audio in the whisper call**, derived from `participants$`. This is the
    condition a one-shot event cannot cover: a proctor who joins mid-whisper, or whose client
-   reconnects, receives no event at all. Participant state, by contrast, is *replayed* — hydrated from
+   reconnects, receives no event at all. Participant state, by contrast, is _replayed_ — hydrated from
    the SFU join response — so it is already correct on that client's first emission.
 
-**Hearing the channel is a way *in* to the mode, never a way out of it.** This is the subtle one, and
+**Hearing the channel is a way _in_ to the mode, never a way out of it.** This is the subtle one, and
 the easy mistake is to write the panel condition as a live `mode || someoneAudible` — which
 reintroduces the very leak the shared mode removes. A proctor who joined mid-whisper has `mode ===
-false`; their panel is open *only* because of the audio. The moment every colleague happens to mute
+false`; their panel is open _only_ because of the audio. The moment every colleague happens to mute
 themselves in the panel — mode still on for all of them, free to unmute a second later — that
 disjunction goes false, so this proctor's panel closes and their exam microphone comes back, alone,
 into a channel that is still live. Audio going quiet says nothing about whether the mode is over. So
@@ -289,28 +503,28 @@ this microphone into that tail is how the last fragment of a whisper reaches the
 signals, each named for what it does — `panelOpen` (the mode) and `examMicHeld` (the mode, plus the
 tail).
 
-A proctor also *joins the exam call muted* regardless of their lobby setting, and is unmuted by the
+A proctor also _joins the exam call muted_ regardless of their lobby setting, and is unmuted by the
 reconciler once the whisper state is known — otherwise they publish to the students for the fraction
 of a second in between.
 
 **The two controls send before they apply**, and change nothing locally if the event is refused.
 Optimism is tempting here and it is wrong twice over: unmuting the whisper mic while the request is
-in flight would latch every *other* proctor into a mode by the audio they briefly heard, with the
+in flight would latch every _other_ proctor into a mode by the audio they briefly heard, with the
 proctor who started it showing no panel and no way to end it; and leaving the mode locally before
-`whisper.end` is accepted is what brings *your* exam mic back while colleagues are still whispering.
+`whisper.end` is accepted is what brings _your_ exam mic back while colleagues are still whispering.
 Both fail closed, for a round trip of button latency.
 
 **Both microphones are driven by one single-flight reconciler**, not by an effect:
 `toObservable(desired).pipe(distinctUntilChanged(), concatMap(reconcile))`. `concatMap`, never
 `switchMap` — a half-finished hand-off must not be abandoned. It releases before it acquires in both
 directions, re-reads the intent after its awaits in case you clicked again, and falls back to muted
-in *both* calls if `enable()` throws. The SDK cannot serialise this for you: `statusChangeSettled` is
+in _both_ calls if `enable()` throws. The SDK cannot serialise this for you: `statusChangeSettled` is
 per-manager, and cancellation does not abort an in-flight `unmuteStream()` — it finishes
 `getUserMedia` and publishes.
 
 **A failed whisper join is blocking for a proctor, not best-effort.** Not for tidiness: the interlock
 above reads the whisper call's participants, which only carry data while you are joined. A proctor in
-the exam call but *not* the whisper call cannot tell that colleagues are whispering, has no reason to
+the exam call but _not_ the whisper call cannot tell that colleagues are whispering, has no reason to
 mute, and their open microphone is exactly how whisper audio would reach the students. So the mic is
 held shut and the route is blocked, with Retry and Leave.
 
@@ -325,23 +539,23 @@ reconciler, with [tests](./app/src/app/features/exam-call/whisper/whisper-sessio
 
 ---
 
-## Status, recording and captions
+## Recording, captions and connection status
 
 Two placement rules shape this part, and both are about who needs the information rather than
 who owns the feature.
 
-**The recording *indicator* is not capability-gated; the *toggle* is.** Only a proctor can start
+**The recording _indicator_ is not capability-gated; the _toggle_ is.** Only a proctor can start
 a recording, but everyone in the call must be able to see that one is running — in a proctored
 exam that is the participant's side of an obligation, not a nicety. So the `REC` badge renders
 off `recording()` alone in both headers, while the toggle renders nothing without the capability.
 Neither toggle contains a role check: `own_capabilities` decides, which is also how the demo
-shows that the grants are real. Worth knowing about the vocabulary: the *permission id* the setup
+shows that the grants are real. Worth knowing about the vocabulary: the _permission id_ the setup
 script grants is `start-recording`, but what a client reads back is `start-record-call`. Same
 thing, two names.
 
 **A notice about somebody else's connection is noise.** Quality bars go on every tile, because a
-proctor watching ten students wants to know whose video is struggling. The words *"Poor
-connection"* appear only for the local participant — ten tiles is ten chances to cry wolf about a
+proctor watching ten students wants to know whose video is struggling. The words _"Poor
+connection"_ appear only for the local participant — ten tiles is ten chances to cry wolf about a
 wifi problem the viewer cannot act on.
 
 Two details that are easy to get wrong:
@@ -375,8 +589,9 @@ Two things here are deliberately not production patterns:
    function the SDK calls to fetch and silently refresh them. See
    [Token Providers](https://getstream.io/docs/platform/authentication/#token-providers) and
    [Automatic Token Expiration](https://getstream.io/docs/platform/authentication/#setting-automatic-token-expiration).
-2. **A fixed cast picked from a list**, instead of signing in. Picking a user *is* the whole identity
+2. **A fixed cast picked from a list**, instead of signing in. Picking a user _is_ the whole identity
    step, which keeps the demo focused on the video integration.
+3. The demo uses custom roles, integrators should make sure to understand Stream's permission system, and configure it to their own needs. The demo app is not ready for production, roles are made for demo use-case, not for a production app.
 
 ---
 
@@ -403,7 +618,7 @@ hand-authored list silently drops the chat capabilities; the setup script clones
 on the **call type**, not only at app level. A call type's grants map governs actions on calls of
 that type.
 
-**`cannot use unknown permission "..."`** — call-type grants take **permission ids**, which are *not*
+**`cannot use unknown permission "..."`** — call-type grants take **permission ids**, which are _not_
 the same vocabulary as the `OwnCapability` values a client reads back in `own_capabilities`. They
 overlap for most entries, but the recording and caption ones drop the `-call` suffix:
 `start-recording`, not `start-record-call`. The script validates every id against
@@ -416,7 +631,7 @@ optional but behaves as required: sending a `video` block without it makes the s
 call type by hand.
 
 **A proctor drops out of the whisper channel on their own when everyone stops talking** — the panel
-condition is treating "somebody is publishing audio" as a live state rather than as a way *in*. A
+condition is treating "somebody is publishing audio" as a live state rather than as a way _in_. A
 proctor who joined mid-whisper is in the mode only because of that audio, so when colleagues mute
 themselves the condition goes false and that proctor's microphone opens into a channel that is still
 live. Latch the mode on the rising edge and clear it only on the explicit end event.
@@ -427,7 +642,7 @@ out; without it the shared whisper mode silently opens for nobody but the initia
 
 **Everyone sits on "Joining…" after End exam** — the SDK auto-leaves when a call ends, so
 `callingState` goes `LEFT` and a naive "not joined yet" guard renders forever. There is no separate
-event to wait for: the terminal state *is* the notification, so distinguish "we left" from "the call
+event to wait for: the terminal state _is_ the notification, so distinguish "we left" from "the call
 ended under us" and render an ended state for the second case.
 
 **The recording or captions button never appears for a proctor** — the capability is missing.
@@ -456,7 +671,7 @@ trims for you — and `CaptionsOverlay` renders it as-is.
 `beforeunload`/`pagehide` handler of its own (its only `window` listeners are `online`/`offline`), so
 neither call is left and the SFU waits out its disconnection timeout. This app registers `pagehide`
 (not `beforeunload` — unreliable on mobile, and it kills the back/forward cache) and leaves both calls
-best-effort. Be clear-eyed about it: `leave()` cannot *finish* during unload. Its value is stopping
+best-effort. Be clear-eyed about it: `leave()` cannot _finish_ during unload. Its value is stopping
 the local tracks and getting an explicit leave frame to the SFU.
 
 **The member pickers find no users** — check the app setting `user_search_disallowed_roles` doesn't
@@ -481,7 +696,7 @@ The three the integration hinges on:
 
 Note the authentication page's warning that **call tokens grant access, they do not restrict it** —
 capability has to come from a role. This demo is a worked example: the app-level `student` and
-`proctor` roles carry no `join-call`, so the `call_member_*` roles *are* the ACL.
+`proctor` roles carry no `join-call`, so the `call_member_*` roles _are_ the ACL.
 
 Also relevant, all under [`/video/docs/javascript/`](https://getstream.io/video/docs/javascript/):
 [Client & auth](https://getstream.io/video/docs/javascript/guides/client-auth/) ·
