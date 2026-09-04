@@ -1,0 +1,59 @@
+<div class="stage">
+  <header class="stage__head">
+    <span class="stage__title">Exam call</span>
+    <code class="stage__id">{{ callId() }}</code>
+    <span class="badge">STUDENT</span>
+    <span class="stage__watching">
+      <mat-icon>visibility</mat-icon>
+      {{ proctorCount() }} {{ proctorCount() === 1 ? 'proctor' : 'proctors' }} watching
+    </span>
+  </header>
+
+  @if (me(); as me) {
+    <div class="stage__feeds">
+      <section class="feed">
+        <span class="feed__label">your camera</span>
+        <div class="feed__body feed__body--camera">
+          <app-participant-tile
+            [call]="exam().call"
+            [participant]="me"
+            trackType="videoTrack"
+            [label]="me.userId + ' (you)'"
+            [mirror]="true"
+          />
+        </div>
+      </section>
+
+      <section class="feed feed--wide">
+        <span class="feed__label">your screen</span>
+        <div class="feed__body">
+          @if (sharing()) {
+            <app-participant-tile
+              [call]="exam().call"
+              [participant]="me"
+              trackType="screenShareTrack"
+              label="sharing · your entire screen"
+            />
+            <button matButton="filled" class="feed__stop" type="button" (click)="stopSharing()">
+              <mat-icon>stop_screen_share</mat-icon>
+              Stop sharing
+            </button>
+          } @else {
+            <div class="prompt">
+              <mat-icon>screen_share</mat-icon>
+              <h2>Share your screen to start</h2>
+              <p>
+                Your proctors need to see your whole screen for the length of the exam.
+                Pick <strong>Entire screen</strong> — a single window or tab isn't accepted.
+              </p>
+              <button matButton="filled" type="button" (click)="share()">
+                <mat-icon>screen_share</mat-icon>
+                Share screen
+              </button>
+            </div>
+          }
+        </div>
+      </section>
+    </div>
+  }
+</div>

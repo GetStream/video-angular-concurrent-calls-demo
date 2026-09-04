@@ -1,0 +1,46 @@
+:host {
+  display: block;
+  height: 100vh;
+  /* The call screens are the one place this demo goes dark: it keeps the video the
+     brightest thing on screen, which is what a proctor is actually looking at. */
+  background: #16181b;
+  color: #f2f3f5;
+}
+
+.call {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+
+  &__joining,
+  &__blocked {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.875rem;
+    text-align: center;
+    padding: 2rem;
+
+    p {
+      margin: 0;
+      max-width: 30rem;
+      color: #b6bbc2;
+      font: var(--mat-sys-body-medium);
+    }
+
+    h1 {
+      margin: 0;
+      font: var(--mat-sys-headline-small);
+    }
+
+    mat-icon {
+      width: 2.5rem;
+      height: 2.5rem;
+      font-size: 2.5rem;
+      color: #b6bbc2;
+    }
+  }
+}

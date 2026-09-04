@@ -1,0 +1,135 @@
+/* See proctor-grid: the host is the flex child, so the host must grow. */
+:host {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.stage {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  min-height: 0;
+  padding: 0.875rem 1rem 0;
+
+  &__head {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    flex: none;
+  }
+
+  &__title {
+    font: var(--mat-sys-title-small);
+  }
+
+  &__id {
+    color: #9aa1a9;
+    font-size: 0.8125rem;
+  }
+
+  &__watching {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    color: #b6bbc2;
+    font: var(--mat-sys-label-medium);
+
+    mat-icon {
+      width: 1rem;
+      height: 1rem;
+      font-size: 1rem;
+    }
+  }
+
+  &__feeds {
+    flex: 1;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+    gap: 1rem;
+    min-height: 0;
+  }
+}
+
+.badge {
+  padding: 0.1rem 0.45rem;
+  border: 1px solid #4a5058;
+  border-radius: 999px;
+  color: #b6bbc2;
+  font: var(--mat-sys-label-small);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.feed {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  min-height: 0;
+  min-width: 0;
+
+  &__label {
+    flex: none;
+    font: var(--mat-sys-label-medium);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #8d949c;
+  }
+
+  &__body {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+  }
+
+  &__body--camera {
+    max-height: 15rem;
+  }
+
+  &__stop {
+    position: absolute;
+    bottom: 0.625rem;
+    right: 0.625rem;
+  }
+}
+
+.prompt {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.625rem;
+  padding: 1.5rem;
+  border: 1px dashed #4a5058;
+  border-radius: 0.5rem;
+  text-align: center;
+
+  h2 {
+    margin: 0;
+    font: var(--mat-sys-title-medium);
+  }
+
+  p {
+    margin: 0;
+    max-width: 26rem;
+    color: #b6bbc2;
+    font: var(--mat-sys-body-medium);
+  }
+
+  mat-icon {
+    width: 2rem;
+    height: 2rem;
+    font-size: 2rem;
+    color: #8d949c;
+  }
+}
+
+@media (max-width: 60rem) {
+  .stage__feeds {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

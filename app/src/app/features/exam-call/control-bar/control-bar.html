@@ -1,0 +1,60 @@
+<footer class="bar">
+  <span class="bar__timer">
+    <mat-icon>schedule</mat-icon>
+    {{ elapsed() }}
+  </span>
+
+  <div class="bar__controls">
+    <button
+      matIconButton
+      type="button"
+      class="ctl"
+      [class.ctl--off]="!micOn()"
+      [matTooltip]="micOn() ? 'Mute' : 'Unmute'"
+      [attr.aria-label]="micOn() ? 'Mute' : 'Unmute'"
+      (click)="toggleMic()"
+    >
+      <mat-icon>{{ micOn() ? 'mic' : 'mic_off' }}</mat-icon>
+    </button>
+
+    <!-- Students get no camera control at all: it stays on for the whole exam. -->
+    @if (isProctor()) {
+      <button
+        matIconButton
+        type="button"
+        class="ctl"
+        [class.ctl--off]="!cameraOn()"
+        [matTooltip]="cameraOn() ? 'Turn off camera' : 'Turn on camera'"
+        [attr.aria-label]="cameraOn() ? 'Turn off camera' : 'Turn on camera'"
+        (click)="toggleCamera()"
+      >
+        <mat-icon>{{ cameraOn() ? 'videocam' : 'videocam_off' }}</mat-icon>
+      </button>
+    } @else {
+      <button
+        matButton
+        type="button"
+        class="ctl-wide"
+        [class.ctl-wide--on]="sharing()"
+        (click)="toggleShare()"
+      >
+        <mat-icon>{{ sharing() ? 'screen_share' : 'present_to_all' }}</mat-icon>
+        {{ sharing() ? 'Sharing screen' : 'Share screen' }}
+      </button>
+    }
+  </div>
+
+  <div class="bar__end">
+    @if (isProctor() && canEnd()) {
+      <button matButton="filled" type="button" class="bar__danger" (click)="endForEveryone()">
+        <mat-icon>call_end</mat-icon>
+        End exam
+      </button>
+    } @else {
+      <button matButton="filled" type="button" class="bar__danger" (click)="leave.emit()">
+        <mat-icon>call_end</mat-icon>
+        Leave
+      </button>
+    }
+  </div>
+</footer>

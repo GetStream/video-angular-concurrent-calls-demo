@@ -19,7 +19,7 @@ import { fileURLToPath } from 'node:url';
 import { StreamClient } from '@stream-io/node-sdk';
 import { CAST, PROCTORS, STUDENTS } from './cast.ts';
 import {
-  APP_GRANTS,
+  appGrantsFrom,
   CUSTOM_ROLES,
   EXAM_GRANTS,
   ROLE,
@@ -119,9 +119,21 @@ async function configureAppGrants(client: StreamClient): Promise<void> {
   step('Application-level grants');
   const { app } = await client.getApp();
 
-  await client.updateApp({ grants: mergeGrants(app.grants, APP_GRANTS) });
-  done(`${ROLE.PROCTOR} → create-call`);
-  done(`${ROLE.STUDENT} → no call capabilities`);
+  // Cloned from the built-in `user` role rather than hand-authored: this scope is shared
+  // across products, so a short list silently removes the chat capabilities the app needs
+  // (notably `search-user`, without which queryUsers returns an empty 200).
+  const baseline = app.grants['user'] ?? [];
+  const ours = appGrantsFrom(baseline);
+
+  await client.updateApp({ grants: mergeGrants(app.grants, ours) });
+  done(
+    `${ROLE.PROCTOR} → ${ours[ROLE.PROCTOR].length} grants ` +
+      `(user baseline + create-call)`,
+  );
+  done(`${ROLE.STUDENT} → ${ours[ROLE.STUDENT].length} grants (user baseline, no call capabilities)`);
+  if (!ours[ROLE.PROCTOR].includes('search-user')) {
+    warn(`'search-user' missing from the user baseline — the member pickers will be empty.`);
+  }
 
   // The pickers on the call-create screen use chat's queryUsers with a role filter, which
   // this app setting can block per role.
@@ -253,7 +265,7 @@ async function main(): Promise<void> {
 
   await ensureRoles(client);
   // fail before touching call types if any capability name is wrong
-  await validateGrants(client, [EXAM_GRANTS, WHISPER_GRANTS, APP_GRANTS]);
+  await validateGrants(client, [EXAM_GRANTS, WHISPER_GRANTS]);
   await configureAppGrants(client);
 
   await configureCallType(client, EXAM_CALL_TYPE, EXAM_GRANTS, {

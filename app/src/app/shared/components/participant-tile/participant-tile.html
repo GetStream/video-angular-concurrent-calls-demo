@@ -1,0 +1,42 @@
+<div
+  class="tile"
+  [class.tile--missing]="!hasTrack()"
+  [class.tile--alert]="!hasTrack() && alertWhenMissing()"
+>
+  <video
+    appVideoTrack
+    class="tile__video"
+    [class.tile__video--mirror]="mirror()"
+    [class.tile__video--hidden]="!hasTrack()"
+    [call]="call()"
+    [sessionId]="participant().sessionId"
+    [trackType]="trackType()"
+  ></video>
+
+  @if (!hasTrack()) {
+    <div class="tile__placeholder">
+      @if (trackType() === 'screenShareTrack') {
+        <mat-icon>screen_share</mat-icon>
+        <span>not sharing</span>
+      } @else {
+        <span class="tile__avatar">{{ initials(displayName()) }}</span>
+      }
+    </div>
+  }
+
+  @if (showMic()) {
+    <span
+      class="tile__mic"
+      [class.tile__mic--off]="!micOn()"
+      [class.tile__mic--speaking]="speaking()"
+      [attr.aria-label]="micOn() ? 'Microphone on' : 'Microphone muted'"
+      [matTooltip]="micOn() ? 'Microphone on' : 'Microphone muted'"
+    >
+      <mat-icon>{{ micOn() ? 'mic' : 'mic_off' }}</mat-icon>
+    </span>
+  }
+
+  @if (label()) {
+    <span class="tile__label">{{ label() }}</span>
+  }
+</div>

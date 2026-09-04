@@ -1,0 +1,65 @@
+<div class="grid">
+  <header class="grid__head">
+    <span class="grid__title">Exam call</span>
+    <code class="grid__id">{{ callId() }}</code>
+    <span class="badge">PROCTOR</span>
+
+    @if (notSharing() > 0) {
+      <span class="badge badge--alert">{{ notSharing() }} not sharing</span>
+    }
+
+    <span class="grid__counts">
+      {{ students().length }} {{ students().length === 1 ? 'student' : 'students' }} ·
+      {{ proctors().length }} {{ proctors().length === 1 ? 'proctor' : 'proctors' }}
+    </span>
+
+    <button matButton type="button" class="grid__copy" (click)="copyLink()">
+      <mat-icon>content_copy</mat-icon>
+      Copy link
+    </button>
+  </header>
+
+  <!-- The viewport is what lets tracks scrolled out of view be unsubscribed, and what
+       stops the sort from reshuffling tiles the proctor is currently looking at. -->
+  <div class="students" appCallViewport [call]="exam().call">
+    @for (student of students(); track student.sessionId) {
+      <div class="student">
+        <div class="student__camera">
+          <app-participant-tile
+            [call]="exam().call"
+            [participant]="student"
+            trackType="videoTrack"
+            [label]="label(student)"
+          />
+        </div>
+        <div class="student__screen">
+          <app-participant-tile
+            [call]="exam().call"
+            [participant]="student"
+            trackType="screenShareTrack"
+            [alertWhenMissing]="true"
+          />
+        </div>
+      </div>
+    } @empty {
+      <p class="students__empty">No students have joined yet.</p>
+    }
+  </div>
+
+  <section class="proctors">
+    <span class="proctors__label">proctors · {{ proctors().length }}</span>
+    <div class="proctors__row">
+      @for (proctor of proctors(); track proctor.sessionId) {
+        <div class="proctors__tile">
+          <app-participant-tile
+            [call]="exam().call"
+            [participant]="proctor"
+            trackType="videoTrack"
+            [label]="proctor.isLocalParticipant ? label(proctor) + ' (you)' : label(proctor)"
+            [mirror]="!!proctor.isLocalParticipant"
+          />
+        </div>
+      }
+    </div>
+  </section>
+</div>

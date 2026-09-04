@@ -1,0 +1,150 @@
+<div class="lobby">
+  <app-header context="Lobby" />
+
+  <div class="lobby__columns">
+    <!-- LEFT: preview + devices + background. Identical on both tabs, so switching
+         between them never disturbs your setup. -->
+    <div class="lobby__left">
+      @if (call(); as previewCall) {
+        <app-device-setup [call]="previewCall" [userLabel]="(user()?.id ?? '') + ' (you)'" />
+      } @else {
+        <div class="lobby__preview-loading">
+          <mat-spinner diameter="28" />
+        </div>
+      }
+    </div>
+
+    <!-- RIGHT: what changes between creating and joining -->
+    <div class="lobby__right">
+      @if (isProctor()) {
+        <div class="tabs" role="tablist">
+          <button
+            type="button"
+            role="tab"
+            class="tabs__tab"
+            [class.tabs__tab--on]="activeTab() === 'create'"
+            [attr.aria-selected]="activeTab() === 'create'"
+            (click)="selectTab('create')"
+          >
+            <mat-icon>add</mat-icon>
+            Create
+          </button>
+          <button
+            type="button"
+            role="tab"
+            class="tabs__tab"
+            [class.tabs__tab--on]="activeTab() === 'join'"
+            [attr.aria-selected]="activeTab() === 'join'"
+            (click)="selectTab('join')"
+          >
+            <mat-icon>arrow_forward</mat-icon>
+            Join
+          </button>
+        </div>
+      } @else {
+        <h2 class="lobby__heading">
+          <mat-icon>arrow_forward</mat-icon>
+          Join a call
+        </h2>
+      }
+
+      @if (activeTab() === 'create') {
+        <app-member-picker
+          role="proctor"
+          label="proctors"
+          [pinned]="user()?.id"
+          [(selected)]="proctorIds"
+        />
+        <app-member-picker
+          role="student"
+          label="students"
+          [selectAllInitially]="true"
+          [(selected)]="studentIds"
+        />
+
+        <div class="field">
+          <span class="field__label">call link</span>
+          <div class="field__row">
+            <div class="field__box field__box--link">
+              <mat-icon>link</mat-icon>
+              <span class="field__link">{{ shareLink() }}</span>
+            </div>
+            <button matButton="outlined" type="button" (click)="copyLink()">
+              <mat-icon>content_copy</mat-icon>
+              Copy
+            </button>
+          </div>
+        </div>
+
+        <div class="lobby__spacer"></div>
+
+        <button
+          matButton="filled"
+          type="button"
+          class="lobby__cta"
+          [disabled]="starting()"
+          (click)="startExam()"
+        >
+          @if (starting()) {
+            <mat-spinner diameter="20" />
+          } @else {
+            <mat-icon iconPositionEnd>arrow_forward</mat-icon>
+          }
+          {{ starting() ? 'Creating…' : 'Start exam call' }}
+        </button>
+      } @else {
+        <div class="field">
+          <span class="field__label">call type</span>
+          <div class="field__box field__box--locked">
+            <mat-icon>dns</mat-icon>
+            <code>{{ callType }}</code>
+            <span class="field__hint">exam call</span>
+            <mat-icon
+              class="field__lock"
+              matTooltip="The only type you join by hand — the proctors' whisper channel is joined for you"
+            >
+              lock
+            </mat-icon>
+          </div>
+        </div>
+
+        <div class="field">
+          <span class="field__label">call id</span>
+          <div class="field__row">
+            <mat-form-field appearance="outline" subscriptSizing="dynamic" class="field__grow">
+              <input
+                matInput
+                type="text"
+                placeholder="brave-otter-42"
+                [value]="joinCallId()"
+                (input)="joinCallId.set($any($event.target).value)"
+                aria-label="Call id"
+              />
+            </mat-form-field>
+            <button matButton="outlined" type="button" (click)="pasteCallId()">
+              <mat-icon>content_paste</mat-icon>
+              Paste
+            </button>
+          </div>
+        </div>
+
+        <div class="lobby__spacer"></div>
+
+        <button
+          matButton="filled"
+          type="button"
+          class="lobby__cta"
+          [disabled]="!canJoin() || joining()"
+          (click)="joinExam()"
+        >
+          @if (joining()) {
+            <mat-spinner diameter="20" />
+          } @else {
+            <mat-icon iconPositionEnd>arrow_forward</mat-icon>
+          }
+          {{ joining() ? 'Joining…' : 'Join call' }}
+        </button>
+      }
+    </div>
+  </div>
+</div>

@@ -15,15 +15,22 @@ const same = (a: string[] = [], b: string[] = []) =>
 
 const { app } = await c.getApp();
 console.log('\nApp-level grants');
-check('proctor has exactly create-call', same(app.grants['proctor'], ['create-call']), JSON.stringify(app.grants['proctor']));
-check('student has no call capabilities', !app.grants['student']?.length, JSON.stringify(app.grants['student'] ?? null));
+const userBase = app.grants['user'] ?? [];
+check('proctor inherits the user baseline', userBase.every((c) => app.grants['proctor']?.includes(c)), `${app.grants['proctor']?.length} grants`);
+check('proctor can search users (queryUsers pickers)', !!app.grants['proctor']?.includes('search-user'));
+check('proctor can create calls', !!app.grants['proctor']?.includes('create-call'));
+check('student inherits the user baseline', userBase.every((c) => app.grants['student']?.includes(c)), `${app.grants['student']?.length} grants`);
+check('student can search users', !!app.grants['student']?.includes('search-user'));
+check('student cannot create calls', !app.grants['student']?.includes('create-call'));
 check('permission checks are enforced', app.disable_permissions_checks === false, `disable_permissions_checks=${app.disable_permissions_checks}`);
 
 const exam = await c.video.getCallType({ name: 'default' });
 console.log("\nCall type 'default' (exam)");
 check('call_member_student can join + publish', same(exam.grants['call_member_student'], ['join-call','read-call','send-audio','send-video','screenshare']));
 check('call_member_proctor adds record/captions/end', same(exam.grants['call_member_proctor'], ['join-call','read-call','send-audio','send-video','screenshare','start-recording','stop-recording','start-closed-captions','stop-closed-captions','end-call']));
-check('app-level roles grant nothing in-call', !exam.grants['student']?.length && !exam.grants['proctor']?.length);
+check('proctor may start a call of this type', same(exam.grants['proctor'], ['create-call']), JSON.stringify(exam.grants['proctor']));
+check('proctor has no in-call capability from the global role', !exam.grants['proctor']?.some((c) => c !== 'create-call'));
+check('student role grants nothing on this type', !exam.grants['student']?.length);
 check('built-in user role untouched', (exam.grants['user']?.length ?? 0) > 0, `${exam.grants['user']?.length} caps`);
 check('recording available', exam.settings.recording.mode === 'available');
 check('captions available', exam.settings.transcription.closed_caption_mode === 'available');

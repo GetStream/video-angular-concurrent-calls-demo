@@ -1,0 +1,83 @@
+<div class="picker">
+  <div class="picker__head">
+    <span class="picker__label">{{ label() }}</span>
+    <span class="picker__count">{{ count() }} selected</span>
+  </div>
+
+  <mat-form-field appearance="outline" subscriptSizing="dynamic">
+    <mat-icon matPrefix>search</mat-icon>
+    <input
+      matInput
+      type="search"
+      [value]="term()"
+      (input)="search($any($event.target).value)"
+      [attr.placeholder]="'Search ' + label()"
+      [attr.aria-label]="'Search ' + label()"
+    />
+    @if (results.isLoading()) {
+      <mat-spinner matSuffix diameter="18" />
+    }
+  </mat-form-field>
+
+  @if (results.error()) {
+    <div class="picker__error">
+      <span>Couldn't load {{ label() }}.</span>
+      <button matButton type="button" (click)="results.reload()">Retry</button>
+    </div>
+  } @else {
+    <ul class="picker__results" role="listbox" [attr.aria-multiselectable]="true">
+      @for (user of results.value(); track user.id) {
+        <li>
+          <button
+            type="button"
+            class="row"
+            role="option"
+            [class.row--on]="isSelected(user.id)"
+            [attr.aria-selected]="isSelected(user.id)"
+            [disabled]="user.id === pinned()"
+            (click)="toggle(user)"
+          >
+            <span class="row__avatar" aria-hidden="true">
+              {{ initials(displayName(user)) }}
+            </span>
+            <span class="row__id">{{ user.id }}</span>
+            @if (user.id === pinned()) {
+              <mat-icon class="row__mark" matTooltip="That's you — always on the call">
+                lock
+              </mat-icon>
+            } @else if (isSelected(user.id)) {
+              <mat-icon class="row__mark">check</mat-icon>
+            }
+          </button>
+        </li>
+      } @empty {
+        @if (!results.isLoading()) {
+          <li class="picker__empty">No {{ label() }} match “{{ term() }}”.</li>
+        }
+      }
+    </ul>
+  }
+
+  @if (pills().length) {
+    <div class="picker__pills">
+      @for (pill of pills(); track pill.id) {
+        <span class="pill" [class.pill--locked]="pill.locked">
+          <span class="pill__avatar" aria-hidden="true">{{ initials(pill.name) }}</span>
+          {{ pill.id }}
+          @if (pill.locked) {
+            <mat-icon class="pill__icon">lock</mat-icon>
+          } @else {
+            <button
+              type="button"
+              class="pill__remove"
+              [attr.aria-label]="'Remove ' + pill.id"
+              (click)="remove(pill.id)"
+            >
+              <mat-icon>close</mat-icon>
+            </button>
+          }
+        </span>
+      }
+    </div>
+  }
+</div>

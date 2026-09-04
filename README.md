@@ -23,7 +23,8 @@ Built in steps. Right now:
 | 1. Server-side setup script | **Done** — runs and verifies clean |
 | 2. Angular app skeleton (config, services, directives, routing) | **Done** — builds, tests and serves |
 | 3. User picker | **Done** — connects both Stream clients and routes to the lobby |
-| 4-7. Lobby, exam call, chat, whisper, extras | Not started |
+| 4. Lobby + exam call | **Done** — device setup, background blur, member pickers, both call layouts |
+| 5-7. Chat, whisper, extras | Not started |
 
 `npm run setup`, `npm start`, `npm run build` and `npm test` all work. The three routes exist but
 render placeholders — the real screens arrive in steps 3-7.
@@ -214,6 +215,15 @@ Two things here are deliberately not production patterns:
 **`STREAM_API_KEY is not set`** — you haven't created `setup/.env`. Copy `setup/.env.example`.
 
 **`Token signature is invalid` (401)** — the secret in `setup/.env` doesn't match the API key.
+
+**The member pickers on the create screen are empty (no error)** — the `proctor` role is missing
+the `search-user` permission. App-level grants are one map shared across products, so a
+hand-authored list silently drops the chat capabilities; the setup script clones the built-in
+`user` role's baseline for exactly this reason.
+
+**`is not allowed to perform this action` when creating a call** — `create-call` has to be granted
+on the **call type**, not only at app level. A call type's grants map governs actions on calls of
+that type.
 
 **`cannot use unknown permission "..."`** — call-type grants take **permission ids**, which are *not*
 the same vocabulary as the `OwnCapability` values a client reads back in `own_capabilities`. They

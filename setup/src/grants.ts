@@ -78,13 +78,23 @@ const PROCTOR_EXTRA: string[] = [
   PERMISSION.END_CALL, // "End exam"
 ];
 
-/** Grants for the `default` call type, which the exam call uses. */
+/**
+ * Grants for the `default` call type, which the exam call uses.
+ *
+ * Note `proctor` is not empty: **a call type's grants map is what governs actions on calls
+ * of that type**, so the app-level `create-call` does not carry over. Leaving `proctor: []`
+ * here made `getOrCreate` fail with *"User 'proctor-john' with role 'proctor' is not
+ * allowed to perform this action"*, even though the app-level grant was in place.
+ *
+ * The design still holds: the `proctor` role grants only the right to *start* a call, while
+ * everything you can do *inside* one comes from the `call_member_*` membership role.
+ */
 export const EXAM_GRANTS: Record<string, string[]> = {
   [ROLE.MEMBER_STUDENT]: [...MEMBER_BASE, ...PUBLISH],
   [ROLE.MEMBER_PROCTOR]: [...MEMBER_BASE, ...PUBLISH, ...PROCTOR_EXTRA],
-  // the app-level roles grant nothing inside a call
+  // starting a call, and nothing else - no in-call capability from the global role
+  [ROLE.PROCTOR]: [PERMISSION.CREATE_CALL],
   [ROLE.STUDENT]: [],
-  [ROLE.PROCTOR]: [],
 };
 
 /**
@@ -104,11 +114,50 @@ export const WHISPER_GRANTS: Record<string, string[]> = {
   // students are never whisper members and hold no role that grants join-call here
   [ROLE.MEMBER_STUDENT]: [],
   [ROLE.STUDENT]: [],
-  [ROLE.PROCTOR]: [],
+  // the lobby creates the whisper call alongside the exam call (step 6)
+  [ROLE.PROCTOR]: [PERMISSION.CREATE_CALL],
 };
 
-/** Application-level grants: only the ability to start a call is decided here. */
-export const APP_GRANTS: Record<string, string[]> = {
-  [ROLE.PROCTOR]: [PERMISSION.CREATE_CALL],
-  [ROLE.STUDENT]: [],
-};
+/**
+ * Application-level grants, derived from the built-in `user` role.
+ *
+ * This scope is a **single map shared by every product**, not just video: the built-in
+ * `user` role carries 24 app-level grants covering chat and feeds - `search-user`,
+ * `read-roles`, `mute-user`, poll and bookmark permissions - and **no call capabilities at
+ * all**, because those live in call-type grants instead.
+ *
+ * So writing a short hand-authored list here does not "grant only what we need", it strips
+ * everything else. Doing that cost us `search-user`, which made the call-create screen's
+ * `queryUsers` pickers return an empty list with a 200 and no error - a silent failure that
+ * only showed up in the browser.
+ *
+ * Hence: clone the `user` baseline for both roles, then decide the call-related capability
+ * explicitly - `create-call` for proctors, nothing for students.
+ */
+export function appGrantsFrom(userAppGrants: string[]): Record<string, string[]> {
+  const baseline = userAppGrants.filter((c) => !CALL_RELATED.has(c));
+  return {
+    [ROLE.PROCTOR]: unique([...baseline, PERMISSION.CREATE_CALL]),
+    [ROLE.STUDENT]: baseline,
+  };
+}
+
+/**
+ * Call capabilities are never inherited at app level - they are decided per call type. If a
+ * future SDK adds one to the `user` baseline, this keeps it from leaking in silently.
+ */
+const CALL_RELATED = new Set<string>([
+  PERMISSION.CREATE_CALL,
+  PERMISSION.JOIN_CALL,
+  PERMISSION.READ_CALL,
+  PERMISSION.SEND_AUDIO,
+  PERMISSION.SEND_VIDEO,
+  PERMISSION.SCREENSHARE,
+  PERMISSION.END_CALL,
+  PERMISSION.START_RECORDING,
+  PERMISSION.STOP_RECORDING,
+  PERMISSION.START_CLOSED_CAPTIONS,
+  PERMISSION.STOP_CLOSED_CAPTIONS,
+]);
+
+const unique = (xs: string[]): string[] => [...new Set(xs)];

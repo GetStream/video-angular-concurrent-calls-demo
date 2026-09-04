@@ -1,0 +1,31 @@
+<div class="call">
+  @if (notOnRoster()) {
+    <div class="call__blocked">
+      <mat-icon>person_off</mat-icon>
+      <h1>You're not on this exam's roster</h1>
+      <p>
+        Only the proctors and students added when the call was created can join it. Ask a
+        proctor to include you, then try the link again.
+      </p>
+      <button matButton="filled" type="button" (click)="backToLobby()">
+        Back to the lobby
+      </button>
+    </div>
+  } @else if (joining() || !joined()) {
+    <div class="call__joining">
+      <mat-spinner diameter="32" />
+      <p>Joining {{ callId() }}…</p>
+    </div>
+  } @else if (exam(); as call) {
+    @if (isProctor()) {
+      <app-proctor-grid [exam]="call" [callId]="callId()" />
+    } @else {
+      <app-student-stage [exam]="call" [callId]="callId()" />
+    }
+    <app-control-bar [exam]="call" [isProctor]="isProctor()" (leave)="leaveCall()" />
+
+    <!-- Always mounted, for everyone: remote audio has to play whether or not the person
+         has a tile on screen. Without it the call is silent. -->
+    <app-audio-sink [call]="call.call" [participants]="call.participants()" />
+  }
+</div>
