@@ -2,6 +2,7 @@ import { computed, type Injector, type Signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import {
   CallingState,
+  SfuModels,
   type Call,
   type CallClosedCaption,
   type CallSessionResponse,
@@ -60,6 +61,12 @@ export class CallFacade {
   readonly captioning: Signal<boolean>;
   readonly closedCaptions: Signal<CallClosedCaption[]>;
 
+  /**
+   * The browser refused to play audio without a user gesture. Per-`Call`, so a proctor has
+   * two of these and the banner has to consider both.
+   */
+  readonly audioBlocked: Signal<boolean>;
+
   // --- devices ------------------------------------------------------------------------
   /**
    * Bound to `optimisticStatus$`, not `status$`. `disableMode` is fixed at 'stop-tracks',
@@ -78,6 +85,12 @@ export class CallFacade {
    */
   readonly statsReport: Signal<CallStatsReport | undefined>;
   readonly latencyMs: Signal<number>;
+  /**
+   * The SFU's own verdict on *our* connection. Derived rather than read off
+   * `localParticipant()` in a template: that object is replaced on every audio-level patch,
+   * so reading a scalar off it would mark consumers dirty many times a second.
+   */
+  readonly connectionQuality: Signal<SfuModels.ConnectionQuality>;
 
   // --- derived ------------------------------------------------------------------------
   readonly joined: Signal<boolean>;
@@ -106,6 +119,7 @@ export class CallFacade {
     this.recording = this.sig(state.recording$, false);
     this.captioning = this.sig(state.captioning$, false);
     this.closedCaptions = this.sig(state.closedCaptions$, []);
+    this.audioBlocked = this.sig(call.blockedAudioTracker.autoplayBlocked$, false);
 
     this.micStatus = this.sig(call.microphone.state.optimisticStatus$, undefined);
     this.cameraStatus = this.sig(call.camera.state.optimisticStatus$, undefined);
@@ -116,6 +130,11 @@ export class CallFacade {
       state.callStatsReport$,
       (report) => report?.publisherStats?.averageRoundTripTimeInMs ?? 0,
       0,
+    );
+    this.connectionQuality = this.derive(
+      state.localParticipant$,
+      (participant) => participant?.connectionQuality ?? SfuModels.ConnectionQuality.UNSPECIFIED,
+      SfuModels.ConnectionQuality.UNSPECIFIED,
     );
 
     this.joined = computed(() => this.callingState() === CallingState.JOINED);

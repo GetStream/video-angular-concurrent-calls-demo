@@ -2,7 +2,10 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import {
+  SfuModels,
   hasAudio,
+  hasInterruptedTrack,
+  hasPausedTrack,
   hasScreenShare,
   hasVideo,
   type Call,
@@ -10,6 +13,7 @@ import {
   type VideoTrackType,
 } from '@stream-io/video-client';
 import { VideoTrack } from '../../directives/video-track';
+import { NetworkQuality } from '../network-quality/network-quality';
 import { initials } from '../../../core/models/demo-user.model';
 
 /**
@@ -21,7 +25,7 @@ import { initials } from '../../../core/models/demo-user.model';
  */
 @Component({
   selector: 'app-participant-tile',
-  imports: [MatIconModule, MatTooltipModule, VideoTrack],
+  imports: [MatIconModule, MatTooltipModule, NetworkQuality, VideoTrack],
   templateUrl: './participant-tile.html',
   styleUrl: './participant-tile.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -34,6 +38,8 @@ export class ParticipantTile {
   /** Draw attention to a missing screen share - a proctor scans the row for these. */
   readonly alertWhenMissing = input(false);
   readonly mirror = input(false);
+  /** Off by default: worth the pixels on a grid you are monitoring, noise on your own tile. */
+  readonly showQuality = input(false);
 
   protected readonly initials = initials;
 
@@ -58,7 +64,27 @@ export class ParticipantTile {
   protected readonly micOn = computed(() => hasAudio(this.participant()));
 
   /** Only meaningful while actually publishing; used for a subtle active state. */
-  protected readonly speaking = computed(
-    () => this.micOn() && !!this.participant().isSpeaking,
+  protected readonly speaking = computed(() => this.micOn() && !!this.participant().isSpeaking);
+
+  /**
+   * The *server* stopped sending this video to save bandwidth - the participant is still
+   * publishing it. Without saying so the tile just looks frozen, and the natural conclusion
+   * is that the student turned their camera off, which would be the wrong one.
+   */
+  protected readonly paused = computed(() => hasPausedTrack(this.participant(), this.trackType()));
+
+  /**
+   * Publishing audio, but no media is arriving: an OS-level mute, a headset unplugged
+   * mid-call. Distinct from a muted mic, and the participant may well not realise.
+   */
+  protected readonly micInterrupted = computed(() =>
+    hasInterruptedTrack(this.participant(), SfuModels.TrackType.AUDIO),
   );
+
+  protected readonly quality = computed(() => this.participant().connectionQuality);
+
+  protected readonly micLabel = computed(() => {
+    if (this.micInterrupted()) return 'Microphone interrupted - no audio is arriving';
+    return this.micOn() ? 'Microphone on' : 'Microphone muted';
+  });
 }

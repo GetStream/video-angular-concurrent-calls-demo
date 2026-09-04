@@ -22,7 +22,10 @@ import { DevicePreferences } from '../../core/stream/device-preferences';
 import { EXAM_CALL_TYPE, LobbyCall } from '../../core/stream/lobby-call';
 import { VideoClient } from '../../core/stream/video-client';
 import { WhisperCall } from '../../core/stream/whisper-call';
+import { AudioBlockedBanner } from '../../shared/components/audio-blocked-banner/audio-blocked-banner';
 import { AudioSink } from '../../shared/components/audio-sink/audio-sink';
+import { CaptionsOverlay } from '../../shared/components/captions-overlay/captions-overlay';
+import { ConnectionBanner } from '../../shared/components/connection-banner/connection-banner';
 import { ChatPanel } from './chat-panel/chat-panel';
 import { ControlBar } from './control-bar/control-bar';
 import { ProctorGrid } from './proctor-grid/proctor-grid';
@@ -48,8 +51,11 @@ import { WhisperSession } from './whisper/whisper-session';
     MatButtonModule,
     MatIconModule,
     MatProgressSpinnerModule,
+    AudioBlockedBanner,
     AudioSink,
+    CaptionsOverlay,
     ChatPanel,
+    ConnectionBanner,
     ControlBar,
     ProctorGrid,
     StudentStage,
@@ -78,6 +84,17 @@ export class ExamCall implements OnInit {
   protected readonly notOnRoster = signal(false);
 
   protected readonly joined = computed(() => this.exam()?.joined() ?? false);
+  /**
+   * We have been in the call at least once. Latched, and it is what gates the layout -
+   * **not** `joined()`.
+   *
+   * A reconnect takes `callingState` away from `JOINED` for a few seconds. Gating the layout
+   * on the live value replaces the whole screen with the join spinner when that happens,
+   * which is both alarming and self-defeating: the connection banner that explains it lives
+   * inside the layout, so it could never be reached in any of the states it exists to report.
+   * Keeping the last frame on screen under a banner is what a call is expected to do.
+   */
+  protected readonly connected = signal(false);
   /** A proctor ended the call for everyone, and the SDK left on our behalf. */
   protected readonly ended = signal(false);
 
@@ -88,6 +105,19 @@ export class ExamCall implements OnInit {
   protected readonly retryingWhisper = signal(false);
 
   protected readonly whisperOpen = computed(() => this.whisper()?.panelOpen() ?? false);
+
+  protected readonly connectionState = computed(
+    () => this.exam()?.callingState() ?? CallingState.IDLE,
+  );
+
+  /**
+   * Autoplay blocking is per-`Call`, and a proctor holds two - so the banner appears if
+   * either is blocked and one click resumes both.
+   */
+  protected readonly audioBlocked = computed(
+    () =>
+      (this.exam()?.audioBlocked() ?? false) || (this.whisper()?.whisper.audioBlocked() ?? false),
+  );
   /**
    * The exam mic is the reconciler's, not the user's, while the channel is open - and for
    * the moment after it closes, until the whisper audio has actually stopped.
@@ -158,6 +188,11 @@ export class ExamCall implements OnInit {
     await call.microphone.disableSpeakingWhileMutedNotification();
     call.microphone.setSilenceThreshold(0);
 
+    // 30s rather than the default: a proctored exam is not a meeting, and a student whose
+    // wifi drops for twenty seconds should come back to the same session rather than
+    // reappearing as a new participant with a fresh screen-share prompt.
+    call.setDisconnectionTimeout(30);
+
     // Replay the lobby's device choices - except that **a proctor always joins muted**,
     // whatever the lobby said. A proctor arriving while colleagues are already whispering
     // would otherwise be publishing to the students for the fraction of a second between
@@ -186,6 +221,8 @@ export class ExamCall implements OnInit {
       this.notOnRoster.set(true);
       return;
     }
+
+    this.connected.set(true);
 
     // The lobby no longer owns the preview; this route does.
     this.lobbyCall.handOff();
@@ -228,6 +265,31 @@ export class ExamCall implements OnInit {
         examMicOn: this.devices.micOn(),
       }),
     );
+  }
+
+  /**
+   * Resume audio on **both** calls from the one gesture: `resumeAudio()` is per-`Call`, and
+   * it has to run inside the click handler or the browser refuses it again.
+   */
+  protected async resumeAudio(): Promise<void> {
+    const calls = [this.exam()?.call, this.whisper()?.whisper.call].filter(
+      (call): call is Call => !!call,
+    );
+    await this.notifier.attempt(
+      () => Promise.all(calls.map((call) => call.resumeAudio())).then(() => undefined),
+      { what: 'Enabling sound' },
+    );
+  }
+
+  /**
+   * `RECONNECTING_FAILED` is terminal - the SDK has stopped retrying - so recovery means a
+   * fresh join. Back to the lobby with the id prefilled, rather than a page reload: the
+   * device setup is there, and it is the same path a link-arrival takes.
+   */
+  protected async rejoin(): Promise<void> {
+    this.leavingDeliberately = true;
+    await this.teardown();
+    await this.router.navigate(['/lobby'], { queryParams: { call_id: this.callId() } });
   }
 
   protected async retryWhisper(): Promise<void> {

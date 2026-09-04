@@ -4,7 +4,10 @@ import { MatIconModule } from '@angular/material/icon';
 import { hasScreenShare } from '@stream-io/video-client';
 import { Notifier } from '../../../core/errors/notifier';
 import type { CallFacade } from '../../../core/stream/call-facade';
+import { LatencyBadge } from '../../../shared/components/latency-badge/latency-badge';
+import { NetworkQuality } from '../../../shared/components/network-quality/network-quality';
 import { ParticipantTile } from '../../../shared/components/participant-tile/participant-tile';
+import { RecordingBadge } from '../../../shared/components/recording-badge/recording-badge';
 
 /**
  * What a student sees: their own two feeds and nothing else.
@@ -14,7 +17,14 @@ import { ParticipantTile } from '../../../shared/components/participant-tile/par
  */
 @Component({
   selector: 'app-student-stage',
-  imports: [MatButtonModule, MatIconModule, ParticipantTile],
+  imports: [
+    MatButtonModule,
+    MatIconModule,
+    LatencyBadge,
+    NetworkQuality,
+    ParticipantTile,
+    RecordingBadge,
+  ],
   templateUrl: './student-stage.html',
   styleUrl: './student-stage.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -31,7 +41,10 @@ export class StudentStage {
     return !!me && hasScreenShare(me);
   });
   protected readonly proctorCount = computed(
-    () => this.exam().participants().filter((p) => p.roles.includes('call_member_proctor')).length,
+    () =>
+      this.exam()
+        .participants()
+        .filter((p) => p.roles.includes('call_member_proctor')).length,
   );
 
   protected async share(): Promise<void> {

@@ -100,6 +100,44 @@
       background: #2f6fd0;
       box-shadow: 0 0 0 2px rgb(76 139 245 / 0.45);
     }
+
+    /* Amber, not red: the participant thinks they are unmuted, which is a different
+       problem from being muted and needs to read as a different state. */
+    &--interrupted {
+      background: #9a7420;
+    }
+  }
+
+  /* Bottom-right: the mic badge owns top-right, the name chip bottom-left. */
+  &__quality {
+    position: absolute;
+    right: 0.3rem;
+    bottom: 0.3rem;
+    display: flex;
+    align-items: center;
+    padding: 0.15rem 0.3rem;
+    border-radius: 0.25rem;
+    background: rgb(0 0 0 / 0.6);
+  }
+
+  &__paused {
+    position: absolute;
+    top: 0.3rem;
+    left: 0.3rem;
+    display: flex;
+    align-items: center;
+    gap: 0.2rem;
+    padding: 0.1rem 0.4rem;
+    border-radius: 0.25rem;
+    background: rgb(0 0 0 / 0.7);
+    color: #e0c26f;
+    font: var(--mat-sys-label-small);
+
+    mat-icon {
+      width: 0.875rem;
+      height: 0.875rem;
+      font-size: 0.875rem;
+    }
   }
 
   &__label {

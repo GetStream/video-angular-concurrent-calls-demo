@@ -1,0 +1,26 @@
+/**
+ * The round icon buttons on the call's control bar.
+ *
+ * A mixin rather than a class in `styles.scss`, and rather than a rule in
+ * `control-bar.scss`: view encapsulation means the control bar's own stylesheet cannot reach
+ * into the DOM of a child component, so the moment a control moved into its own component
+ * (the recording and captions toggles) it lost the base styling and rendered as a bare
+ * Material button. Including this from each component keeps one source of truth without
+ * leaking global selectors into every page.
+ */
+@mixin icon-control {
+  .ctl {
+    background: #2b2f34;
+    --mat-icon-button-icon-color: #e6e8ea;
+
+    &--off {
+      background: #b3403f;
+      --mat-icon-button-icon-color: #fff;
+    }
+
+    &--active {
+      background: #2f6fd0;
+      --mat-icon-button-icon-color: #fff;
+    }
+  }
+}

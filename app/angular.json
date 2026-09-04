@@ -46,7 +46,12 @@
               "sdp",
               "sdp-transform",
               "ua-parser-js"
-            ]
+            ],
+            "stylePreprocessorOptions": {
+              "includePaths": [
+                "src/styles"
+              ]
+            }
           },
           "configurations": {
             "production": {

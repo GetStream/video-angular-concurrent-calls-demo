@@ -13,6 +13,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { OwnCapability } from '@stream-io/video-client';
 import { Notifier } from '../../../core/errors/notifier';
+import { CaptionsToggle } from '../../../shared/components/captions-toggle/captions-toggle';
+import { RecordingToggle } from '../../../shared/components/recording-toggle/recording-toggle';
 import { DevicePreferences } from '../../../core/stream/device-preferences';
 import type { CallFacade } from '../../../core/stream/call-facade';
 import type { WhisperSession } from '../whisper/whisper-session';
@@ -20,7 +22,7 @@ import type { WhisperSession } from '../whisper/whisper-session';
 /** The bar along the bottom of both call layouts. */
 @Component({
   selector: 'app-control-bar',
-  imports: [MatButtonModule, MatIconModule, MatTooltipModule],
+  imports: [MatButtonModule, MatIconModule, MatTooltipModule, CaptionsToggle, RecordingToggle],
   templateUrl: './control-bar.html',
   styleUrl: './control-bar.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

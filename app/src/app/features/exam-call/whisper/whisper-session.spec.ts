@@ -59,6 +59,7 @@ function fakeCall() {
         this.volume = v;
       },
     },
+    blockedAudioTracker: { autoplayBlocked$: new BehaviorSubject(false) },
     sent: [] as unknown[],
     sendFails: false,
     async sendCustomEvent(payload: unknown) {

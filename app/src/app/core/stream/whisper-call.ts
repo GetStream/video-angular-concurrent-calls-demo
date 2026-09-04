@@ -43,10 +43,9 @@ export class WhisperCall {
       role: 'call_member_proctor',
     }));
 
-    const result = await this.notifier.attempt(
-      () => call.getOrCreate({ data: { members } }),
-      { what: 'Creating the proctors-only channel' },
-    );
+    const result = await this.notifier.attempt(() => call.getOrCreate({ data: { members } }), {
+      what: 'Creating the proctors-only channel',
+    });
     return result.ok;
   }
 

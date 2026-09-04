@@ -1,5 +1,9 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
-import { hasScreenShareAudio, type Call, type StreamVideoParticipant } from '@stream-io/video-client';
+import {
+  hasScreenShareAudio,
+  type Call,
+  type StreamVideoParticipant,
+} from '@stream-io/video-client';
 import { AudioTrack } from '../../directives/audio-track';
 
 /**

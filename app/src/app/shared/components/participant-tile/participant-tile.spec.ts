@@ -21,7 +21,10 @@ function participant(overrides: Partial<StreamVideoParticipant> = {}): StreamVid
   } as StreamVideoParticipant;
 }
 
-function render(p: StreamVideoParticipant, trackType: 'videoTrack' | 'screenShareTrack' = 'videoTrack') {
+function render(
+  p: StreamVideoParticipant,
+  trackType: 'videoTrack' | 'screenShareTrack' = 'videoTrack',
+) {
   const fixture = TestBed.createComponent(ParticipantTile);
   fixture.componentRef.setInput('call', callStub);
   fixture.componentRef.setInput('participant', p);
@@ -55,9 +58,7 @@ describe('ParticipantTile mic indicator', () => {
   });
 
   it('marks an unmuted participant who is currently speaking', () => {
-    const { mic } = render(
-      participant({ publishedTracks: [TrackType.AUDIO], isSpeaking: true }),
-    );
+    const { mic } = render(participant({ publishedTracks: [TrackType.AUDIO], isSpeaking: true }));
 
     expect(mic?.classList).toContain('tile__mic--speaking');
   });
@@ -70,10 +71,7 @@ describe('ParticipantTile mic indicator', () => {
   });
 
   it('omits the indicator on a screen-share tile, which has no microphone', () => {
-    const { mic } = render(
-      participant({ publishedTracks: [TrackType.AUDIO] }),
-      'screenShareTrack',
-    );
+    const { mic } = render(participant({ publishedTracks: [TrackType.AUDIO] }), 'screenShareTrack');
 
     expect(mic).toBeNull();
   });

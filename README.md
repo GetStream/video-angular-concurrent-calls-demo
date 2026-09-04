@@ -26,7 +26,7 @@ Built in steps. Right now:
 | 4. Lobby + exam call | **Done** — device setup, background blur, member pickers, both call layouts |
 | 5. Chat in the exam call | **Done** — one room per call, stock components, dark theme |
 | 6. Proctors-only whisper channel | **Done** — shared mode over custom events, verified across four clients |
-| 7. Recording, captions, network badges | Not started |
+| 7. Recording, captions, network + connection status | **Done** — capability-gated toggles, live status indicators |
 
 `npm run setup`, `npm start`, `npm run build` and `npm test` all work.
 
@@ -135,7 +135,14 @@ Two browser profiles is enough for most of it; the whisper channel wants three.
    first two are whispering — they arrive with the panel already up and their mic already muted,
    having received no event — and then have everyone mute themselves in the panel. The channel goes
    silent and *nobody* drops out of it, because only **Go back to students** ends it.
-5. **End exam** ends both calls for everyone.
+5. **Recording and captions**: as a proctor, the record and `CC` buttons appear in the control
+   bar; a student's do not, because the buttons render off `own_capabilities` rather than off a
+   role check. Start recording and the `REC` badge appears in **everyone's** header — the
+   indicator is deliberately not capability-gated.
+6. **Connection status**: your own connection quality and round-trip time sit in the header, and
+   every student tile carries quality bars. Take a client offline in devtools and the call stays
+   on screen under a *"You're offline"* banner rather than resetting to a spinner.
+7. **End exam** ends both calls for everyone.
 
 Background-filter models (~26 MB) are copied into `app/public/mediapipe/` by a `postinstall` hook,
 so the filters load from your own origin instead of a CDN. That directory is generated and
@@ -318,6 +325,45 @@ reconciler, with [tests](./app/src/app/features/exam-call/whisper/whisper-sessio
 
 ---
 
+## Status, recording and captions
+
+Two placement rules shape this part, and both are about who needs the information rather than
+who owns the feature.
+
+**The recording *indicator* is not capability-gated; the *toggle* is.** Only a proctor can start
+a recording, but everyone in the call must be able to see that one is running — in a proctored
+exam that is the participant's side of an obligation, not a nicety. So the `REC` badge renders
+off `recording()` alone in both headers, while the toggle renders nothing without the capability.
+Neither toggle contains a role check: `own_capabilities` decides, which is also how the demo
+shows that the grants are real. Worth knowing about the vocabulary: the *permission id* the setup
+script grants is `start-recording`, but what a client reads back is `start-record-call`. Same
+thing, two names.
+
+**A notice about somebody else's connection is noise.** Quality bars go on every tile, because a
+proctor watching ten students wants to know whose video is struggling. The words *"Poor
+connection"* appear only for the local participant — ten tiles is ten chances to cry wolf about a
+wifi problem the viewer cannot act on.
+
+Two details that are easy to get wrong:
+
+- **A resolved request is not a running recording.** `startRecording()` resolving means the
+  server accepted the job; `recording()` only flips when `call.recording_started` arrives, up to
+  several seconds later. Clearing the button's pending state on the request puts it back to
+  "start recording" while a recording is starting, which invites a second click and a second job.
+  So it is cleared by the event, with a timeout as a backstop. Same for captions.
+- **Reconnects must not reset the screen.** A reconnect takes `callingState` away from `JOINED`
+  for a few seconds. Gating the call layout on the live value replaces everything with a join
+  spinner when that happens — and takes the connection banner, which lives inside the layout,
+  with it, so the banner can never be seen in any of the states it exists to report. The layout
+  is gated on a latched "have joined at least once" instead, and the banner reports over the
+  frozen last frame.
+
+`call.setDisconnectionTimeout(30)` is set deliberately: a proctored exam is not a meeting, and a
+student whose wifi drops for twenty seconds should come back to the same session rather than
+reappearing as a new participant with a fresh screen-share prompt.
+
+---
+
 ## Demo-only shortcuts
 
 Two things here are deliberately not production patterns:
@@ -383,6 +429,28 @@ out; without it the shared whisper mode silently opens for nobody but the initia
 `callingState` goes `LEFT` and a naive "not joined yet" guard renders forever. There is no separate
 event to wait for: the terminal state *is* the notification, so distinguish "we left" from "the call
 ended under us" and render an ended state for the second case.
+
+**The recording or captions button never appears for a proctor** — the capability is missing.
+These render off `own_capabilities`, so check the call type's grants: `start-recording` /
+`stop-recording` and `start-closed-captions` / `stop-closed-captions` on `call_member_proctor`.
+Note the client reads them back under different names (`start-record-call`,
+`start-closed-captions-call`) — that is expected, not a mismatch.
+
+**The whole call is replaced by a "Joining…" spinner during a brief network drop** — the layout
+is gated on the live `callingState === JOINED` rather than on having joined at least once. Latch
+it, or a reconnect looks like a fresh join and the connection banner becomes unreachable.
+
+**The "browser blocked audio" banner never appears** — expected in this app, and not a bug:
+granting `getUserMedia` satisfies Chrome's autoplay requirement, so anyone who has a camera and
+microphone is already exempt. It is reachable for a participant who denies the device prompt.
+
+**Captions turn on but no text appears** — the transcription service needs real speech, and a
+headless browser cannot supply it convincingly. Chrome's `--use-fake-device-for-media-stream`
+emits a tone; even `--use-file-for-fake-audio-capture` with a recording of speech produced no
+caption events here. So captions are worth checking by hand rather than trusting an automated
+run: turn them on, say something, and watch for `call.closed_caption` events. If those events do
+arrive and still nothing renders, the state is in `closedCaptions()` — a rolling window the SDK
+trims for you — and `CaptionsOverlay` renders it as-is.
 
 **A ghost participant lingers after a refresh or tab close** — the client registers no
 `beforeunload`/`pagehide` handler of its own (its only `window` listeners are `online`/`offline`), so

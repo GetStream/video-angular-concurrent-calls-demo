@@ -1,3 +1,5 @@
+@use 'call-controls' as *;
+
 :host {
   flex: none;
   display: block;
@@ -48,20 +50,7 @@
   }
 }
 
-.ctl {
-  background: #2b2f34;
-  --mat-icon-button-icon-color: #e6e8ea;
-
-  &--off {
-    background: #b3403f;
-    --mat-icon-button-icon-color: #fff;
-  }
-
-  &--active {
-    background: #2f6fd0;
-    --mat-icon-button-icon-color: #fff;
-  }
-}
+@include icon-control;
 
 .ctl-wide {
   --mat-button-text-label-text-color: #e6e8ea;

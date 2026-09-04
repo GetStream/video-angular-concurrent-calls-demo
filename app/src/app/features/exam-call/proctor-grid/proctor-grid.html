@@ -15,9 +15,18 @@
       <span class="badge badge--alert">{{ notSharing() }} not sharing</span>
     }
 
+    <app-recording-badge [recording]="exam().recording()" />
+
     <span class="grid__counts">
       {{ students().length }} {{ students().length === 1 ? 'student' : 'students' }} ·
       {{ proctors().length }} {{ proctors().length === 1 ? 'proctor' : 'proctors' }}
+    </span>
+
+    <!-- Your own connection, not anyone else's: the per-tile bars cover the students, and a
+         notice about somebody else's wifi is not something you can act on. -->
+    <span class="grid__net">
+      <app-network-quality [quality]="exam().connectionQuality()" [showLabel]="true" />
+      <app-latency-badge [ms]="exam().latencyMs()" />
     </span>
 
     <button matButton type="button" class="grid__copy" (click)="copyLink()">
@@ -37,6 +46,7 @@
             [participant]="student"
             trackType="videoTrack"
             [label]="label(student)"
+            [showQuality]="true"
           />
         </div>
         <div class="student__screen">

@@ -29,10 +29,25 @@
       class="tile__mic"
       [class.tile__mic--off]="!micOn()"
       [class.tile__mic--speaking]="speaking()"
-      [attr.aria-label]="micOn() ? 'Microphone on' : 'Microphone muted'"
-      [matTooltip]="micOn() ? 'Microphone on' : 'Microphone muted'"
+      [class.tile__mic--interrupted]="micInterrupted()"
+      [attr.aria-label]="micLabel()"
+      [matTooltip]="micLabel()"
     >
-      <mat-icon>{{ micOn() ? 'mic' : 'mic_off' }}</mat-icon>
+      <mat-icon>{{ micOn() && !micInterrupted() ? 'mic' : 'mic_off' }}</mat-icon>
+    </span>
+  }
+
+  @if (showQuality()) {
+    <span class="tile__quality">
+      <app-network-quality [quality]="quality()" />
+    </span>
+  }
+
+  <!-- Not a fault: the server is saving bandwidth and will resume when there is room. -->
+  @if (paused()) {
+    <span class="tile__paused" matTooltip="Paused by the server to save bandwidth">
+      <mat-icon>pause_circle</mat-icon>
+      paused
     </span>
   }
 

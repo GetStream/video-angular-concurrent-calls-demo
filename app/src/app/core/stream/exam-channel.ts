@@ -9,8 +9,7 @@ import '../models/stream-chat-custom';
 export const CHAT_CHANNEL_TYPE = 'messaging';
 
 export type ChatOpenResult =
-  | { channel: Channel }
-  | { error: 'not-a-member' | 'no-channel' | 'failed' };
+  { channel: Channel } | { error: 'not-a-member' | 'no-channel' | 'failed' };
 
 /**
  * The exam call's chat channel.

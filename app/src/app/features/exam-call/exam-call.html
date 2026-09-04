@@ -19,12 +19,17 @@
       </p>
       <button matButton="filled" type="button" (click)="backToLobby()">Back to the lobby</button>
     </div>
-  } @else if (joining() || !joined()) {
+  } @else if (joining() || !connected()) {
     <div class="call__joining">
       <mat-spinner diameter="32" />
       <p>Joining {{ callId() }}…</p>
     </div>
   } @else if (exam(); as call) {
+    <!-- Above the layout, not over it: these push the call down rather than covering the
+         thing the reader is trying to look at. -->
+    <app-connection-banner [state]="connectionState()" (recover)="rejoin()" />
+    <app-audio-blocked-banner [blocked]="audioBlocked()" (resume)="resumeAudio()" />
+
     <div class="call__body">
       @if (isProctor()) {
         <app-proctor-grid [exam]="call" [callId]="callId()" [whisperOpen]="whisperOpen()" />
@@ -35,6 +40,10 @@
       @if (chatOpen()) {
         <app-chat-panel [callId]="callId()" />
       }
+
+      <!-- Inside the body, so captions sit over the video and not over the control bar.
+           Call-wide and role-independent, so neither layout owns them. -->
+      <app-captions-overlay [call]="call" />
     </div>
 
     <app-control-bar

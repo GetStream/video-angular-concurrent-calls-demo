@@ -58,6 +58,11 @@
       <mat-icon>chat_bubble_outline</mat-icon>
     </button>
 
+    <!-- Both render nothing without the capability, so there is no role check here: the
+         server's grants decide, and the UI only reflects them. -->
+    <app-recording-toggle [call]="exam()" />
+    <app-captions-toggle [call]="exam()" />
+
     <!-- Only a proctor gets the private channel, and only once it is actually joined. -->
     @if (whisper()) {
       <button

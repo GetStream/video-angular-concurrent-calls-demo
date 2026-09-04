@@ -1,11 +1,4 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  computed,
-  effect,
-  inject,
-  input,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, input } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import {
@@ -18,7 +11,10 @@ import {
 import { Notifier } from '../../../core/errors/notifier';
 import type { CallFacade } from '../../../core/stream/call-facade';
 import { CallViewport } from '../../../shared/directives/call-viewport';
+import { LatencyBadge } from '../../../shared/components/latency-badge/latency-badge';
+import { NetworkQuality } from '../../../shared/components/network-quality/network-quality';
 import { ParticipantTile } from '../../../shared/components/participant-tile/participant-tile';
+import { RecordingBadge } from '../../../shared/components/recording-badge/recording-badge';
 
 /** Small camera tiles never need more than this; the screen shares are left uncapped. */
 const CAMERA_RESOLUTION = { width: 320, height: 240 };
@@ -32,7 +28,15 @@ const CAMERA_RESOLUTION = { width: 320, height: 240 };
  */
 @Component({
   selector: 'app-proctor-grid',
-  imports: [MatButtonModule, MatIconModule, CallViewport, ParticipantTile],
+  imports: [
+    MatButtonModule,
+    MatIconModule,
+    CallViewport,
+    LatencyBadge,
+    NetworkQuality,
+    ParticipantTile,
+    RecordingBadge,
+  ],
   templateUrl: './proctor-grid.html',
   styleUrl: './proctor-grid.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

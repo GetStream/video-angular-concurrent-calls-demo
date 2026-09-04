@@ -18,6 +18,8 @@
 
   /* Layout beside chat: the video side flexes, the panel is a fixed column. */
   &__body {
+    /* Containing block for the captions overlay, which must stay clear of the control bar. */
+    position: relative;
     flex: 1;
     display: flex;
     min-height: 0;
