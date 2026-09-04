@@ -30,6 +30,16 @@
     min-width: 0;
   }
 
+  &__nav {
+    --mat-button-text-label-text-color: var(--mat-sys-on-surface-variant);
+
+    flex: none;
+
+    &--here {
+      --mat-button-text-label-text-color: var(--mat-sys-primary);
+    }
+  }
+
   &__user {
     display: inline-flex;
     align-items: center;

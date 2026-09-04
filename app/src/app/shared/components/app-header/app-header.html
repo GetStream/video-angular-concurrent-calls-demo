@@ -7,6 +7,21 @@
   </div>
 
   <div class="chrome__identity">
+    @if (isProctor()) {
+      <!-- Recordings outlive the call that made them, so they belong in the app chrome
+           rather than in a control bar. Proctors only: `list-recordings` is granted to
+           `call_member_proctor` and refused to students by the server. -->
+      <a
+        matButton
+        routerLink="/recordings"
+        routerLinkActive="chrome__nav--here"
+        class="chrome__nav"
+      >
+        <mat-icon>video_library</mat-icon>
+        Recordings
+      </a>
+    }
+
     @if (user(); as signedIn) {
       <span class="chrome__user">
         <span class="chrome__avatar" aria-hidden="true">{{ initials(signedIn.name) }}</span>

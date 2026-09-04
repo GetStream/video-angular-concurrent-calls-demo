@@ -1,0 +1,25 @@
+<div class="page">
+  <app-header context="Recordings" />
+
+  <div class="page__head">
+    <h1 class="page__title">Recordings</h1>
+    <button matButton type="button" [disabled]="calls.isLoading()" (click)="reload()">
+      <mat-icon>refresh</mat-icon>
+      Refresh
+    </button>
+  </div>
+
+  @if (calls.isLoading()) {
+    <p class="state"><mat-spinner diameter="18" /> Loading your calls…</p>
+  } @else if (calls.value(); as list) {
+    @if (list.length) {
+      <div class="list">
+        @for (summary of list; track summary.cid) {
+          <app-call-row [summary]="summary" />
+        }
+      </div>
+    } @else {
+      <p class="state">No calls yet.</p>
+    }
+  }
+</div>

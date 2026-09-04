@@ -27,7 +27,10 @@ check('permission checks are enforced', app.disable_permissions_checks === false
 const exam = await c.video.getCallType({ name: 'default' });
 console.log("\nCall type 'default' (exam)");
 check('call_member_student can join + publish', same(exam.grants['call_member_student'], ['join-call','read-call','send-audio','send-video','screenshare']));
-check('call_member_proctor adds record/captions/end', same(exam.grants['call_member_proctor'], ['join-call','read-call','send-audio','send-video','screenshare','start-recording','stop-recording','start-closed-captions','stop-closed-captions','end-call']));
+check('call_member_proctor adds record/captions/end', same(exam.grants['call_member_proctor'], ['join-call','read-call','send-audio','send-video','screenshare','start-recording','stop-recording','list-recordings','start-closed-captions','stop-closed-captions','end-call']));
+// No `OwnCapability` exists for this one, so the recordings UI cannot gate on a capability -
+// the grant is the only thing standing between a student and the recordings endpoint.
+check('only proctors may list recordings', !!exam.grants['call_member_proctor']?.includes('list-recordings') && !exam.grants['call_member_student']?.includes('list-recordings'));
 check('proctor may start a call of this type', same(exam.grants['proctor'], ['create-call']), JSON.stringify(exam.grants['proctor']));
 check('proctor has no in-call capability from the global role', !exam.grants['proctor']?.some((c) => c !== 'create-call'));
 check('student role grants nothing on this type', !exam.grants['student']?.length);
@@ -41,7 +44,7 @@ check('target resolution 1280x720', exam.settings.video.target_resolution.width 
 
 const whisper = await c.video.getCallType({ name: 'audio_room' });
 console.log("\nCall type 'audio_room' (whisper)");
-check('only call_member_proctor can join', same(whisper.grants['call_member_proctor'], ['join-call','read-call','send-audio','send-event','end-call']));
+check('only call_member_proctor can join', same(whisper.grants['call_member_proctor'], ['join-call','read-call','send-audio','send-event','end-call','list-recordings']));
 // Without this the shared whisper mode silently never opens for anyone but the initiator.
 check('call_member_proctor may send the whisper events', !!whisper.grants['call_member_proctor']?.includes('send-event'));
 check('send-event is granted here only', !exam.grants['call_member_proctor']?.includes('send-event'));

@@ -51,6 +51,7 @@ const PERMISSION = {
   SEND_VIDEO: 'send-video',
   SCREENSHARE: 'screenshare',
   END_CALL: 'end-call',
+  LIST_RECORDINGS: 'list-recordings',
   START_RECORDING: 'start-recording',
   STOP_RECORDING: 'stop-recording',
   START_CLOSED_CAPTIONS: 'start-closed-captions',
@@ -74,6 +75,11 @@ const PUBLISH: string[] = [
 const PROCTOR_EXTRA: string[] = [
   PERMISSION.START_RECORDING, // step 7 - recording toggle
   PERMISSION.STOP_RECORDING,
+  // Listing past recordings, for the /recordings screen. Like `send-event`, this id has
+  // **no `OwnCapability` entry**, so a client cannot read it back from `own_capabilities`
+  // and there is no capability for the UI to gate on - see `require-proctor-guard` for
+  // what stands in for one.
+  PERMISSION.LIST_RECORDINGS,
   PERMISSION.START_CLOSED_CAPTIONS, // step 7 - closed captions toggle
   PERMISSION.STOP_CLOSED_CAPTIONS,
   PERMISSION.END_CALL, // "End exam"
@@ -103,8 +109,9 @@ export const EXAM_GRANTS: Record<string, string[]> = {
  *
  * `send-audio` is the meaningful addition: `audio_room` defaults to a request-to-speak
  * workflow. `end-call` is needed because "End exam" ends both calls - the whisper call must
- * never outlive the exam call. No recording permission, because `recording.mode` is
- * `auto-on` and the server starts it, so the client never calls `startRecording()`.
+ * never outlive the exam call. No start/stop recording permission, because `recording.mode`
+ * is `auto-on` and the server starts it, so the client never calls `startRecording()` -
+ * but `list-recordings` is still needed to read back what it produced.
  *
  * `send-event` is what `sendCustomEvent()` needs, and it is easy to miss: the whisper mode
  * is shared between proctors by a custom WS event on this call, and without the grant the
@@ -119,6 +126,11 @@ export const WHISPER_GRANTS: Record<string, string[]> = {
     PERMISSION.SEND_AUDIO,
     PERMISSION.SEND_EVENT,
     PERMISSION.END_CALL,
+    // Granted per call type, and that is not a formality: with this on `default` only, the
+    // recordings screen listed the exam videos and was refused the whisper audio -
+    // *"not allowed to perform action ListRecordings in scope 'video:audio_room'"* - which
+    // would have hidden 26 of this app's 33 recordings.
+    PERMISSION.LIST_RECORDINGS,
   ],
   // students are never whisper members and hold no role that grants join-call here
   [ROLE.MEMBER_STUDENT]: [],
@@ -164,6 +176,7 @@ const CALL_RELATED = new Set<string>([
   PERMISSION.SCREENSHARE,
   PERMISSION.SEND_EVENT,
   PERMISSION.END_CALL,
+  PERMISSION.LIST_RECORDINGS,
   PERMISSION.START_RECORDING,
   PERMISSION.STOP_RECORDING,
   PERMISSION.START_CLOSED_CAPTIONS,

@@ -1,4 +1,4 @@
-import { signal } from '@angular/core';
+import { computed, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import {
@@ -23,8 +23,9 @@ const CAST: DemoUser[] = [
 class FakeCurrentUser {
   signedInAs: DemoUser | null = null;
   result = true;
-  /** The shared header renders from this, so the fake has to provide it too. */
+  /** The shared header renders from these, so the fake has to provide them too. */
   readonly user = signal<DemoUser | null>(null);
+  readonly isProctor = computed(() => this.user()?.role === 'proctor');
   restore(): DemoUser | null {
     return null;
   }

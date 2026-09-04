@@ -1,0 +1,84 @@
+<div class="call">
+  <span class="chip" [class.chip--private]="summary().label === 'Whisper'">
+    {{ summary().label }}
+  </span>
+
+  <code class="call__cid">{{ summary().cid }}</code>
+
+  @if (summary().createdAt; as created) {
+    <span class="call__when">{{ created | date: 'MMM d, y · HH:mm' }}</span>
+  }
+
+  <span class="call__members">
+    {{ summary().memberCount }} {{ summary().memberCount === 1 ? 'member' : 'members' }}
+  </span>
+
+  <span class="call__state" [class.call__state--live]="!summary().endedAt">
+    {{ summary().endedAt ? 'ended' : 'live' }}
+  </span>
+
+  <button
+    matButton="outlined"
+    type="button"
+    class="call__fetch"
+    [disabled]="loading()"
+    [attr.aria-expanded]="open()"
+    (click)="toggle()"
+  >
+    @if (loading()) {
+      <mat-spinner diameter="16" />
+    } @else {
+      <mat-icon>{{ open() ? 'expand_less' : 'video_library' }}</mat-icon>
+    }
+    {{ open() ? 'Hide' : 'Fetch recordings' }}
+  </button>
+</div>
+
+@if (open() && !loading()) {
+  <div class="found">
+    @switch (result()?.status) {
+      @case ('ok') {
+        @if (recordings().length) {
+          <ul class="found__list">
+            @for (recording of recordings(); track recording.url) {
+              <li class="rec">
+                <mat-icon class="rec__icon">
+                  {{ isAudioOnly(recording) ? 'graphic_eq' : 'movie' }}
+                </mat-icon>
+                <span class="rec__when">
+                  {{ recording.start_time | date: 'HH:mm:ss' }}
+                </span>
+                <span class="rec__duration">{{ durationOf(recording) }}</span>
+                <a
+                  matButton
+                  class="rec__open"
+                  [href]="recording.url"
+                  target="_blank"
+                  rel="noopener"
+                >
+                  <mat-icon>open_in_new</mat-icon>
+                  Open
+                </a>
+              </li>
+            }
+          </ul>
+        } @else {
+          <p class="found__note">No recordings.</p>
+        }
+      }
+      @case ('refused') {
+        <p class="found__note">
+          <mat-icon>lock</mat-icon>
+          Not allowed to list recordings on <code>{{ summary().type }}</code> calls.
+        </p>
+      }
+      @case ('failed') {
+        <p class="found__note">
+          <mat-icon>error_outline</mat-icon>
+          Couldn't load.
+          <button matButton type="button" (click)="retry()">Try again</button>
+        </p>
+      }
+    }
+  </div>
+}

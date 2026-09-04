@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, inject, input } from '@angular/core';
-import { Router } from '@angular/router';
+import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -14,7 +14,7 @@ import { initials } from '../../../core/models/demo-user.model';
  */
 @Component({
   selector: 'app-header',
-  imports: [MatButtonModule, MatIconModule, MatTooltipModule],
+  imports: [MatButtonModule, MatIconModule, MatTooltipModule, RouterLink, RouterLinkActive],
   templateUrl: './app-header.html',
   styleUrl: './app-header.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -27,6 +27,7 @@ export class AppHeader {
   private readonly router = inject(Router);
 
   protected readonly user = this.currentUser.user;
+  protected readonly isProctor = this.currentUser.isProctor;
   protected readonly initials = initials;
 
   protected async signOut(): Promise<void> {

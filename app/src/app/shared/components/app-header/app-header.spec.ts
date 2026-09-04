@@ -1,4 +1,4 @@
-import { signal } from '@angular/core';
+import { computed, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { CurrentUser } from '../../../core/auth/current-user';
@@ -9,6 +9,7 @@ const PROCTOR: DemoUser = { id: 'proctor-john', name: 'John', role: 'proctor', t
 
 class FakeCurrentUser {
   readonly user = signal<DemoUser | null>(PROCTOR);
+  readonly isProctor = computed(() => this.user()?.role === 'proctor');
   signedOut = false;
   restore() {
     return this.user();

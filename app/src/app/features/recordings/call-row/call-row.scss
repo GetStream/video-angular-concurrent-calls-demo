@@ -1,0 +1,132 @@
+:host {
+  display: block;
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 0.5rem;
+}
+
+code {
+  padding: 0.05rem 0.25rem;
+  border-radius: 0.25rem;
+  background: var(--mat-sys-surface-container-highest);
+  font-size: 0.8125rem;
+}
+
+.call {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.625rem 0.875rem;
+
+  &__cid {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__when,
+  &__members,
+  &__state {
+    color: var(--mat-sys-on-surface-variant);
+    font: var(--mat-sys-label-medium);
+    white-space: nowrap;
+  }
+
+  &__members {
+    margin-left: auto;
+  }
+
+  /* A dot rather than colour and weight: coloured bold text sitting next to the button
+     read as a second control. A live call is still worth spotting - its recording may
+     still be running - so it keeps a marker, just not a clickable-looking one. */
+  &__state--live::before {
+    content: '';
+    display: inline-block;
+    width: 0.4rem;
+    height: 0.4rem;
+    margin-right: 0.3rem;
+    border-radius: 50%;
+    background: var(--mat-sys-primary);
+    vertical-align: 0.05rem;
+  }
+
+  &__fetch {
+    flex: none;
+  }
+}
+
+.chip {
+  flex: none;
+  padding: 0.1rem 0.45rem;
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 999px;
+  font: var(--mat-sys-label-small);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+
+  /* The whisper channel's audio is a proctors-only conversation, so its rows are marked as
+     such - you should be able to tell what you are about to open before you open it. */
+  &--private {
+    border-color: var(--mat-sys-primary);
+    background: var(--mat-sys-primary);
+    color: var(--mat-sys-on-primary);
+  }
+}
+
+.found {
+  border-top: 1px solid var(--mat-sys-outline-variant);
+  padding: 0.375rem 0.875rem 0.5rem;
+
+  &__list {
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__note {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin: 0.25rem 0;
+    color: var(--mat-sys-on-surface-variant);
+    font: var(--mat-sys-body-small);
+
+    mat-icon {
+      width: 1.125rem;
+      height: 1.125rem;
+      font-size: 1.125rem;
+    }
+  }
+}
+
+.rec {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.25rem 0;
+
+  &__icon {
+    flex: none;
+    width: 1.125rem;
+    height: 1.125rem;
+    font-size: 1.125rem;
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  &__when {
+    font: var(--mat-sys-body-medium);
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__duration {
+    color: var(--mat-sys-on-surface-variant);
+    font: var(--mat-sys-label-medium);
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__open {
+    margin-left: auto;
+  }
+}

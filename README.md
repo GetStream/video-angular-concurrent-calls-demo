@@ -151,6 +151,10 @@ Two browser profiles is enough for most of it; the whisper channel wants three.
    every student tile carries quality bars. Take a client offline in devtools and the call stays
    on screen under a _"You're offline"_ banner rather than resetting to a spinner.
 7. **End exam** ends both calls for everyone.
+8. **Recordings**: back in the lobby, the header now has a **Recordings** link (proctors only).
+   It lists the calls you were on; press **Fetch recordings** on one to ask that call for its
+   recordings. The whisper channel's rows are marked, and they will be longer than the exam's —
+   `auto-on` records the whole channel, not just the whispering.
 
 Background-filter models (~26 MB) are copied into `app/public/mediapipe/` by a `postinstall` hook,
 so the filters load from your own origin instead of a CDN. That directory is generated and
@@ -222,16 +226,27 @@ Only what the demo actually calls:
 ```
 call_member_student   join-call, read-call, send-audio, send-video, screenshare
 call_member_proctor   ...the same, plus start-recording, stop-recording,
-                      start-closed-captions, stop-closed-captions, end-call
+                      list-recordings, start-closed-captions,
+                      stop-closed-captions, end-call
 ```
 
 On `audio_room` (the whisper channel) only `call_member_proctor` gets anything at all:
-`join-call, read-call, send-audio, send-event, end-call`.
+`join-call, read-call, send-audio, send-event, end-call, list-recordings`.
 
-`send-event` is the one to know about. It is what `call.sendCustomEvent()` needs, the whisper mode
-is shared between proctors by exactly one custom event — and there is **no `OwnCapability` entry
-for it**, so there is nothing to grep for in the SDK; the id only shows up in `listPermissions()`.
-Its neighbour `send-custom-event` is Chat's permission for `channel.sendEvent()`, not this one.
+**Two of those ids have no `OwnCapability` counterpart at all**, which makes them the two easiest
+to miss in the whole setup — there is nothing to grep for in the SDK, and they show up only in
+`listPermissions()`:
+
+- `send-event` is what `call.sendCustomEvent()` needs, and the whisper mode is shared between
+  proctors by exactly one custom event. Without it the whisper opens for nobody but the initiator.
+  Its neighbour `send-custom-event` is Chat's permission for `channel.sendEvent()`, not this one.
+- `list-recordings` is what the [Recordings screen](#the-recordings-screen) needs. Because there is
+  no capability to read back, that screen cannot gate itself the way the record and caption buttons
+  do — see that section for what stands in.
+
+Both are granted **per call type**, and that is not a formality: with `list-recordings` on `default`
+only, the recordings screen listed the exam videos and was refused the whisper audio with
+_"not allowed to perform action ListRecordings in scope 'video:audio_room'"_.
 
 ### 3. Call type settings
 
@@ -578,6 +593,79 @@ reappearing as a new participant with a fresh screen-share prompt.
 
 ---
 
+## The recordings screen
+
+`/recordings`, reachable from the app header whenever a proctor is signed in. It exists because
+**there is no "all recordings for this app" endpoint**: `listRecordings` is a method on a *call*,
+so recordings are always reached in two steps.
+
+The screen is shaped like the API rather than like a wish. It lists the calls you are a member of,
+and each row has a **Fetch recordings** button that asks that one call. Nothing is loaded until you
+press it.
+
+That two-level shape is not a layout preference — it is the only one that behaves:
+
+- **A flat list of recordings costs one request per call, and gets rate-limited.** The first
+  version of this screen fanned `listRecordings` out over all 30 queried calls to build a single
+  time-ordered list. The API answered part of the burst with `429 Too Many Requests`, which
+  silently dropped those calls' recordings: one run showed 7 recordings where there were 23.
+  Fetching per row means one request per click, and the problem disappears rather than being
+  papered over with a concurrency limit.
+- **A 403 and a 429 need opposite advice.** A refusal means the role holds no `list-recordings`
+  grant on that call type — permanent, and worth saying plainly. Anything else is transient and
+  worth retrying. Conflating them is how this first went wrong: a rate limit was reported as a
+  missing grant, which would send a reader off to fix a setup script that was working.
+
+Two more things about the API:
+
+- **`queryCalls` must be scoped to your own membership.** An unscoped query from a client is
+  refused with a 403 that spells out the fix: _"some calls match your query but cannot be returned
+  because you don't have access to them. Did you forget to include `{members: $in: ["student-tom"]}`?"_
+  A proctor who happens to be on every call gets away without the filter, which makes this exactly
+  the kind of bug that ships.
+- **`queryCalls` builds real `Call` objects** and runs `applyDeviceConfig` on each one. It is only
+  harmless here because both call types set `camera_default_on: false` and `mic_default_on: false`
+  — against a camera-on call type, *opening this screen would turn the camera on*. It also logs
+  _"[video manager]: Setting direction is not supported on this device"_ once per call on any
+  desktop. Both happen inside `queryCalls`, so neither can be switched off from outside;
+  `withDisabledDevices: false` would only make the camera case worse.
+
+**The URLs are pre-signed and expire** — an `Expires` parameter, a 14-day window at the time of
+writing. So a row re-fetches every time it is opened rather than holding links that may have
+quietly stopped working, and nothing is cached between visits.
+
+**A recording that has just stopped is not there yet.** Encoding takes a while; the asset lands with
+`call.recording_ready`, which is the event behind the in-call "the recording is ready" toast.
+
+**Why this is the one screen that gates on a role.** Everywhere else, a privileged control reads
+`own_capabilities` and renders itself out of existence without the capability, so the server's
+grants decide and the UI reflects them. That is impossible here: `list-recordings` has no
+`OwnCapability` entry, so there is nothing for a client to read. The route guard therefore checks
+`role === 'proctor'` and is treated as what it is — a convenience, not a control. The enforcement
+is the grant, and it holds regardless: a student's token gets _"User 'student-tom' with roles
+['student', 'call_member_student'] is not allowed to perform action ListRecordings in scope
+'video:default'"_.
+
+Server-side the same two steps are available on `@stream-io/node-sdk`, which is where you would go
+to sweep an entire app rather than one user's calls:
+
+```ts
+const { calls } = await client.video.queryCalls({
+  limit: 100, sort: [{ field: 'created_at', direction: -1 }],
+});
+for (const { call } of calls) {
+  const { recordings } = await client.video.listRecordings({ type: call.type, id: call.id });
+}
+```
+
+Files: [`call-recordings.ts`](./app/src/app/core/stream/call-recordings.ts) (the two queries and the
+failure classification), [`recordings.ts`](./app/src/app/features/recordings/recordings.ts) (the call
+list, with [tests](./app/src/app/features/recordings/recordings.spec.ts)),
+[`call-row.ts`](./app/src/app/features/recordings/call-row/call-row.ts) (one call, fetched on demand),
+[`require-proctor-guard.ts`](./app/src/app/core/auth/require-proctor-guard.ts).
+
+---
+
 ## Demo-only shortcuts
 
 Two things here are deliberately not production patterns:
@@ -644,6 +732,11 @@ out; without it the shared whisper mode silently opens for nobody but the initia
 `callingState` goes `LEFT` and a naive "not joined yet" guard renders forever. There is no separate
 event to wait for: the terminal state _is_ the notification, so distinguish "we left" from "the call
 ended under us" and render an ended state for the second case.
+
+**A row on the Recordings screen says you are not allowed to list recordings** — the call type is
+missing the `list-recordings` grant for `call_member_proctor`. It is granted per call type, so check
+both `default` and `audio_room`; `npm run verify` asserts both. If instead the row says it *couldn't
+load*, that is transient — usually a rate limit — and the retry is there for it.
 
 **The recording or captions button never appears for a proctor** — the capability is missing.
 These render off `own_capabilities`, so check the call type's grants: `start-recording` /
