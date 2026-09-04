@@ -52,7 +52,7 @@ export class ChatPanel implements OnInit {
   private readonly theme = inject(ThemeService);
 
   protected readonly ready = signal(false);
-  protected readonly problem = signal<'none' | 'no-channel' | 'not-a-member' | 'failed'>('none');
+  protected readonly problem = signal<'none' | 'not-a-member' | 'failed'>('none');
 
   ngOnInit(): void {
     void this.open();

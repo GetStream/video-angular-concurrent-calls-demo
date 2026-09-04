@@ -7,12 +7,9 @@
     <span class="chat__hint">one room — students and proctors</span>
   </header>
 
-  @if (problem() === 'no-channel') {
-    <div class="chat__error">
-      <p>No chat room for this call yet — it appears once a proctor joins.</p>
-      <button matButton type="button" (click)="open()">Check again</button>
-    </div>
-  } @else if (problem() === 'not-a-member') {
+  <!-- No "room doesn't exist" state: `watch()` is a get-or-create, so the only outcomes are
+       a room you may read, a refusal, and a failure. -->
+  @if (problem() === 'not-a-member') {
     <div class="chat__error">
       <p>
         You're not on this exam's chat room. Reading it requires being one of its members, so ask a

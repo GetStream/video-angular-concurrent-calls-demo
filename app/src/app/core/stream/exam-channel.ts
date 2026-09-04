@@ -8,8 +8,7 @@ import '../models/stream-chat-custom';
 /** One messaging channel per exam call, sharing its id so the two are trivially linked. */
 export const CHAT_CHANNEL_TYPE = 'messaging';
 
-export type ChatOpenResult =
-  { channel: Channel } | { error: 'not-a-member' | 'no-channel' | 'failed' };
+export type ChatOpenResult = { channel: Channel } | { error: 'not-a-member' | 'failed' };
 
 /**
  * The exam call's chat channel.
@@ -22,9 +21,13 @@ export type ChatOpenResult =
  * **Membership is the access control.** In the `messaging` type, plain `read-channel`
  * belongs to `channel_member`; the `user` baseline students inherit only carries
  * `read-channel-owner`. So a student who is on the call but not in the channel gets
- * *"not allowed to perform action ReadChannel"*. That makes it essential that the channel
- * is always created **with** its members - and that a client never accidentally creates an
- * empty one, because no role can retrofit membership except a proctor.
+ * *"not allowed to perform action ReadChannel"*, which is what `open` reads the 403 as.
+ *
+ * That makes it essential that the channel is always created **with** its members, in the
+ * lobby, beside the call. Note the sharp edge this leaves: `watch()` is a *get-or-create*,
+ * so opening the panel for a call whose channel was never created will create an empty one,
+ * and nothing in this app retrofits membership onto an existing channel. The room is created
+ * once and only once, which is the invariant the whole design rests on.
  */
 @Injectable({ providedIn: 'root' })
 export class ExamChannel {
@@ -56,32 +59,25 @@ export class ExamChannel {
    * `watch()` is not optional - `setAsActiveChannel` issues no network request, it reads
    * local state, so without watching first the panel renders empty and gets no updates.
    *
-   * But `watch()` is also a *get-or-create*, so a student calling it on a call with no
-   * channel would create an empty one and lock the room for everyone. Existence is checked
-   * with a query first, which creates nothing.
+   * One request, and the failure is classified from its own status rather than from a
+   * preliminary lookup: a **403** is the API refusing `ReadChannel`, which in the
+   * `messaging` type means exactly one thing - you are not a member - because plain
+   * `read-channel` belongs to `channel_member` and the roles here only carry
+   * `read-channel-owner`. Anything else is transport or server trouble.
+   *
+   * No `Notifier` snackbar here, deliberately: the panel *is* this call's error surface and
+   * renders the outcome with a retry, so reporting it twice would just be noise. The
+   * failure is still logged rather than swallowed.
    */
   async open(callId: string): Promise<ChatOpenResult> {
-    const cid = `${CHAT_CHANNEL_TYPE}:${callId}`;
-
-    const found = await this.notifier.attempt(
-      () => this.chat.raw.queryChannels({ cid }, undefined, { limit: 1 }),
-      { what: 'Looking up the exam chat' },
-    );
-    if (!found.ok) return { error: 'failed' };
-
-    if (!found.value.length) {
-      // Either it genuinely does not exist, or we cannot see it. Both look the same from
-      // here, and neither is something this client should try to fix - the room is created
-      // once, beside the call, and never retrofitted.
-      return { error: 'no-channel' };
+    const channel = this.chat.raw.channel(CHAT_CHANNEL_TYPE, callId);
+    try {
+      await channel.watch();
+      return { channel };
+    } catch (error) {
+      const status = (error as { status?: number }).status;
+      console.warn(`[stream] watch(${CHAT_CHANNEL_TYPE}:${callId}) failed (${status}):`, error);
+      return { error: status === 403 ? 'not-a-member' : 'failed' };
     }
-
-    const channel = found.value[0];
-    const watched = await this.notifier.attempt(() => channel.watch(), {
-      what: 'Opening the exam chat',
-    });
-    if (!watched.ok) return { error: 'not-a-member' };
-
-    return { channel };
   }
 }

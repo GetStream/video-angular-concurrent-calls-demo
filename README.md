@@ -485,16 +485,6 @@ await channel.watch(); // mandatory — setAsActiveChannel issues no request
 channelService.setAsActiveChannel(channel);
 ```
 
-`init()` is skipped deliberately: its websocket list handlers ignore your filter, so an unrelated
-`notification.message_new` can swap the active channel out from under a call-scoped panel.
-
-Three smaller things: `name` is a **custom** channel field in `stream-chat` v9, so setting it needs
-a `CustomChannelData` module augmentation; the dark theme is owned by `ThemeService`, not by CSS
-(see Troubleshooting); and the chat SDK lands in the **initial** bundle rather than the lazy call
-route, because the route guard reaches `CurrentUser` → `ChatClient` → the `stream-chat-angular`
-barrel. Splitting it would mean moving chat connection out of sign-in, which complicates the very
-flow the demo exists to show, so the budget was raised deliberately instead.
-
 ### If you are on Angular Universal
 
 `@stream-io/video-client` imports `webrtc-adapter` for side effects, and it touches `window` at
@@ -632,7 +622,7 @@ reappearing as a new participant with a fresh screen-share prompt.
 ## The recordings screen
 
 `/recordings`, reachable from the app header whenever a proctor is signed in. It exists because
-**there is no "all recordings for this app" endpoint**: `listRecordings` is a method on a *call*,
+**there is no "all recordings for this app" endpoint**: `listRecordings` is a method on a _call_,
 so recordings are always reached in two steps.
 
 The screen is shaped like the API rather than like a wish. It lists the calls you are a member of,
@@ -661,7 +651,7 @@ Two more things about the API:
   the kind of bug that ships.
 - **`queryCalls` builds real `Call` objects** and runs `applyDeviceConfig` on each one. It is only
   harmless here because both call types set `camera_default_on: false` and `mic_default_on: false`
-  — against a camera-on call type, *opening this screen would turn the camera on*. It also logs
+  — against a camera-on call type, _opening this screen would turn the camera on_. It also logs
   _"[video manager]: Setting direction is not supported on this device"_ once per call on any
   desktop. Both happen inside `queryCalls`, so neither can be switched off from outside;
   `withDisabledDevices: false` would only make the camera case worse.
@@ -687,10 +677,14 @@ to sweep an entire app rather than one user's calls:
 
 ```ts
 const { calls } = await client.video.queryCalls({
-  limit: 100, sort: [{ field: 'created_at', direction: -1 }],
+  limit: 100,
+  sort: [{ field: "created_at", direction: -1 }],
 });
 for (const { call } of calls) {
-  const { recordings } = await client.video.listRecordings({ type: call.type, id: call.id });
+  const { recordings } = await client.video.listRecordings({
+    type: call.type,
+    id: call.id,
+  });
 }
 ```
 
@@ -771,8 +765,8 @@ ended under us" and render an ended state for the second case.
 
 **A row on the Recordings screen says you are not allowed to list recordings** — the call type is
 missing the `list-recordings` grant for `call_member_proctor`. It is granted per call type, so check
-both `default` and `audio_room`; `npm run verify` asserts both. If instead the row says it *couldn't
-load*, that is transient — usually a rate limit — and the retry is there for it.
+both `default` and `audio_room`; `npm run verify` asserts both. If instead the row says it _couldn't
+load_, that is transient — usually a rate limit — and the retry is there for it.
 
 **The recording or captions button never appears for a proctor** — the capability is missing.
 These render off `own_capabilities`, so check the call type's grants: `start-recording` /
