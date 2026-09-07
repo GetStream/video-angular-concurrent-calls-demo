@@ -1,10 +1,9 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
-import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
+import { MatMenuModule } from '@angular/material/menu';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatSelectModule } from '@angular/material/select';
 import type { Call } from '@stream-io/video-client';
 import { distinctUntilChanged, of, switchMap } from 'rxjs';
 import { BackgroundFilter, type BackgroundChoice } from '../../../core/stream/background-filter';
@@ -31,13 +30,7 @@ import { Notifier } from '../../../core/errors/notifier';
  */
 @Component({
   selector: 'app-device-controls',
-  imports: [
-    MatButtonModule,
-    MatFormFieldModule,
-    MatIconModule,
-    MatProgressSpinnerModule,
-    MatSelectModule,
-  ],
+  imports: [MatButtonModule, MatIconModule, MatMenuModule, MatProgressSpinnerModule],
   templateUrl: './device-controls.html',
   styleUrl: './device-controls.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -113,6 +106,71 @@ export class DeviceControls {
     void this.background.probeSupport();
   }
 
+  /**
+   * One descriptor per trigger, so the row is a single loop and the background choice is a
+   * picker like any other rather than a pair of chips beside them. `options` is already
+   * flattened to id/label pairs, which is what lets a device list and a two-value setting
+   * share the same template.
+   *
+   * `current` is what the trigger shows: the selected device's own label, or the browser
+   * default that is genuinely in use until something is picked. The speaker drops out where
+   * the browser cannot switch outputs, and the background where MediaPipe is unsupported.
+   */
+  protected readonly pickers = computed<Picker[]>(() => [
+    {
+      kind: 'microphone',
+      icon: 'mic',
+      selected: this.selectedMic(),
+      current: name(this.mics(), this.selectedMic(), 'Microphone'),
+      options: options(this.mics(), 'Microphone'),
+      empty: 'No microphone found',
+    },
+    {
+      kind: 'camera',
+      icon: 'videocam',
+      selected: this.selectedCamera(),
+      current: name(this.cameras(), this.selectedCamera(), 'Camera'),
+      options: options(this.cameras(), 'Camera'),
+      empty: 'No camera found',
+    },
+    ...(this.canPickSpeaker()
+      ? [
+          {
+            kind: 'speaker' as const,
+            icon: 'volume_up',
+            selected: this.selectedSpeaker(),
+            current: name(this.speakers(), this.selectedSpeaker(), 'Speaker'),
+            options: options(this.speakers(), 'Speaker'),
+            empty: 'No speaker found',
+          },
+        ]
+      : []),
+    ...(this.blurSupported()
+      ? [
+          {
+            kind: 'background' as const,
+            icon: this.blurChoice() === 'blur' ? 'blur_on' : 'blur_off',
+            selected: this.blurChoice(),
+            current: this.blurChoice() === 'blur' ? 'Blur' : 'No blur',
+            options: [
+              { id: 'none', label: 'No blur' },
+              { id: 'blur', label: 'Blur' },
+            ],
+            empty: '',
+            busy: this.blurLoading(),
+          },
+        ]
+      : []),
+  ]);
+
+  /** Routes to the per-kind methods below, which differ in what they mirror. */
+  protected async choose(kind: PickerKind, id: string): Promise<void> {
+    if (kind === 'microphone') return this.selectMic(id);
+    if (kind === 'camera') return this.selectCamera(id);
+    if (kind === 'speaker') return this.selectSpeaker(id);
+    return this.setBackground(id as BackgroundChoice);
+  }
+
   protected async selectCamera(deviceId: string): Promise<void> {
     const result = await this.notifier.attempt(() => this.call().camera.select(deviceId), {
       what: 'Switching camera',
@@ -148,11 +206,46 @@ export class DeviceControls {
     await this.background.apply(this.call(), choice);
   }
 
-  protected deviceLabel(device: MediaDeviceInfo, fallback: string): string {
-    return device.label || `${fallback} ${device.deviceId.slice(0, 6)}`;
-  }
-
   private allCalls(): Call[] {
     return [this.call(), ...this.mirrorTo()];
   }
+}
+
+type PickerKind = 'microphone' | 'camera' | 'speaker' | 'background';
+
+interface Picker {
+  kind: PickerKind;
+  icon: string;
+  /** Currently selected id, for the check mark in the menu. */
+  selected: string | undefined;
+  /** What the trigger reads. */
+  current: string;
+  options: { id: string; label: string }[];
+  /** Shown as a disabled item when `options` is empty. */
+  empty: string;
+  /** The background filter is still loading its model. */
+  busy?: boolean;
+}
+
+/**
+ * The selected device's own label, or the browser default that is in use until one is
+ * picked. "Default" rather than "System default": beside a device icon the longer phrase
+ * says nothing extra, and it set the floor on how narrow these triggers could get.
+ */
+function name(
+  devices: MediaDeviceInfo[],
+  selectedId: string | undefined,
+  fallback: string,
+): string {
+  const device = selectedId ? devices.find((d) => d.deviceId === selectedId) : undefined;
+  if (!device) return 'Default';
+  return device.label || `${fallback} ${device.deviceId.slice(0, 6)}`;
+}
+
+/** Devices as id/label pairs, so a device list and a setting share one template. */
+function options(devices: MediaDeviceInfo[], fallback: string): { id: string; label: string }[] {
+  return devices.map((d) => ({
+    id: d.deviceId,
+    label: d.label || `${fallback} ${d.deviceId.slice(0, 6)}`,
+  }));
 }

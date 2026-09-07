@@ -1,91 +1,49 @@
-<!-- `floatLabel="always"` with a placeholder, rather than letting the label sit inside an
-     empty box: until something is picked the SDK has selected no device and the browser's own
-     default is in use. A speaker is never selected automatically, so with the default float
-     behaviour that field reads as though "Speaker" were its value. -->
+<!-- One compact trigger per choice: the icon says which choice, the text says its value.
+     A label reading "Microphone" beside a microphone icon is the same word twice, and three
+     outlined form fields with floating labels turn a device check into a data-entry form. -->
 <div class="controls">
-  <mat-form-field appearance="outline" subscriptSizing="dynamic" floatLabel="always">
-    <mat-label>Microphone</mat-label>
-    <mat-select
-      [value]="selectedMic()"
-      (valueChange)="selectMic($event)"
-      panelWidth="null"
-      placeholder="System default"
-    >
-      @for (device of mics(); track device.deviceId) {
-        <mat-option [value]="device.deviceId">
-          {{ deviceLabel(device, 'Microphone') }}
-        </mat-option>
-      }
-    </mat-select>
-  </mat-form-field>
-
-  <mat-form-field appearance="outline" subscriptSizing="dynamic" floatLabel="always">
-    <mat-label>Camera</mat-label>
-    <mat-select
-      [value]="selectedCamera()"
-      (valueChange)="selectCamera($event)"
-      panelWidth="null"
-      placeholder="System default"
-    >
-      @for (device of cameras(); track device.deviceId) {
-        <mat-option [value]="device.deviceId">
-          {{ deviceLabel(device, 'Camera') }}
-        </mat-option>
-      }
-    </mat-select>
-  </mat-form-field>
-
-  @if (canPickSpeaker()) {
-    <mat-form-field appearance="outline" subscriptSizing="dynamic" floatLabel="always">
-      <mat-label>Speaker</mat-label>
-      <mat-select
-        [value]="selectedSpeaker()"
-        (valueChange)="selectSpeaker($event)"
-        panelWidth="null"
-        placeholder="System default"
+  <div class="pickers">
+    @for (picker of pickers(); track picker.kind) {
+      <!-- A plain button, not `matButton`: Material projects children into its own label
+           span, which reorders a three-part row and puts the chevron beside the icon. -->
+      <button
+        type="button"
+        class="picker"
+        [attr.data-kind]="picker.kind"
+        [attr.aria-label]="picker.kind + ': ' + picker.current"
+        [matMenuTriggerFor]="menu"
       >
-        @for (device of speakers(); track device.deviceId) {
-          <mat-option [value]="device.deviceId">
-            {{ deviceLabel(device, 'Speaker') }}
-          </mat-option>
+        @if (picker.busy) {
+          <mat-spinner class="picker__icon" diameter="18" />
+        } @else {
+          <mat-icon class="picker__icon">{{ picker.icon }}</mat-icon>
         }
-      </mat-select>
-    </mat-form-field>
-  }
+        <span class="picker__name">{{ picker.current }}</span>
+        <mat-icon class="picker__chevron">expand_more</mat-icon>
+      </button>
 
-  @if (blurSupported()) {
-    <div class="bg">
-      <span class="bg__label">virtual background</span>
-      <div class="bg__options">
-        <button
-          matButton
-          type="button"
-          class="bg__option"
-          [class.bg__option--active]="blurChoice() === 'none'"
-          [disabled]="blurLoading()"
-          (click)="setBackground('none')"
-        >
-          none
-        </button>
-        <button
-          matButton
-          type="button"
-          class="bg__option"
-          [class.bg__option--active]="blurChoice() === 'blur'"
-          [disabled]="blurLoading()"
-          (click)="setBackground('blur')"
-        >
-          @if (blurLoading()) {
-            <mat-spinner diameter="16" />
-          }
-          blur
-        </button>
-      </div>
-      @if (blurDegraded()) {
-        <p class="bg__warn">
-          Blur is struggling on this machine — turning it off will smooth your video.
-        </p>
-      }
-    </div>
+      <mat-menu #menu>
+        @for (option of picker.options; track option.id) {
+          <button
+            mat-menu-item
+            type="button"
+            role="menuitemradio"
+            [attr.aria-checked]="option.id === picker.selected"
+            (click)="choose(picker.kind, option.id)"
+          >
+            <mat-icon>{{ option.id === picker.selected ? 'check' : '' }}</mat-icon>
+            <span>{{ option.label }}</span>
+          </button>
+        } @empty {
+          <!-- Reachable whenever permission has not been granted: `listDevices()` returns
+               nothing until the browser has a reason to name the hardware. -->
+          <button mat-menu-item type="button" disabled>{{ picker.empty }}</button>
+        }
+      </mat-menu>
+    }
+  </div>
+
+  @if (blurDegraded()) {
+    <p class="warn">Blur is struggling here — turning it off will smooth your video.</p>
   }
 </div>

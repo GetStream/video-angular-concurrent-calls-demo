@@ -74,14 +74,19 @@ function setup(mirrorTo: ReturnType<typeof fakeCall>[] = []) {
 }
 
 const el = (fixture: { nativeElement: unknown }) => fixture.nativeElement as HTMLElement;
-const fieldLabels = (fixture: { nativeElement: unknown }) =>
-  Array.from(el(fixture).querySelectorAll('mat-label')).map((l) => l.textContent?.trim());
+/** Reads the kind off each trigger, so the assertion does not depend on Material's markup. */
+const pickerKinds = (fixture: { nativeElement: unknown }) =>
+  Array.from(el(fixture).querySelectorAll('[data-kind]')).map((b) =>
+    b.getAttribute('data-kind'),
+  );
 
 describe('DeviceControls', () => {
-  it('offers a picker for each kind of device', () => {
+  it('offers a picker for each device, and one for the background', () => {
     const { fixture } = setup();
 
-    expect(fieldLabels(fixture)).toEqual(['Microphone', 'Camera', 'Speaker']);
+    // The background is a picker like the others rather than a pair of chips beside them,
+    // so it belongs in the same row and the same assertion.
+    expect(pickerKinds(fixture)).toEqual(['microphone', 'camera', 'speaker', 'background']);
   });
 
   it('mirrors the microphone choice onto every call the user holds', async () => {
@@ -145,12 +150,18 @@ describe('DeviceControls', () => {
 
   it('labels a device that reports no name, rather than showing an empty option', () => {
     const { fixture } = setup();
-    const label = (
+    const mic = (
       fixture.componentInstance as unknown as {
-        deviceLabel(d: MediaDeviceInfo, f: string): string;
+        pickers(): { kind: string; options: { id: string; label: string }[] }[];
       }
-    ).deviceLabel(MICS[1], 'Microphone');
+    )
+      .pickers()
+      .find((p) => p.kind === 'microphone');
 
-    expect(label).toBe('Microphone mic-b');
+    // MICS[1] reports `label: ''`, which browsers do until permission is granted.
+    expect(mic?.options).toEqual([
+      { id: 'mic-a', label: 'Headset' },
+      { id: 'mic-b', label: 'Microphone mic-b' },
+    ]);
   });
 });

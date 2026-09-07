@@ -1,50 +1,101 @@
 :host {
   display: block;
   min-width: 0;
+  /* The layout adapts to the host rather than to a flag: these controls sit under a wide
+     preview in the lobby and inside a 25rem dialog mid-call, and a container query means
+     neither caller has to say which. */
+  container-type: inline-size;
 }
 
 .controls {
   display: flex;
   flex-direction: column;
-  gap: 0.625rem;
-  /* An outlined field's floating label is positioned *above* its own border box by about
-     8px, so the first field's label is clipped whenever this sits at the top of a
-     container that scrolls - which is exactly what `mat-dialog-content` is. Reserving the
-     overhang here fixes it wherever these controls are mounted, rather than each host
-     having to out-specify Material's own dialog padding rule. */
-  padding-top: 0.5rem;
+  gap: 0.75rem;
 }
 
-.bg {
+.pickers {
   display: flex;
+  /* Stacked by default, so the narrow case needs no query and the dialog is never a
+     special case. */
   flex-direction: column;
-  gap: 0.375rem;
+  gap: 0.5rem;
+}
 
-  &__label {
-    font: var(--mat-sys-label-medium);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
+@container (min-width: 26rem) {
+  .pickers {
+    flex-direction: row;
+    /* Centred here rather than on the base rule: the stacked layout has no free space on
+       its main axis, so this only means anything once the direction is a row. */
+    justify-content: center;
+    /* Wraps rather than overflows: the row has to survive a fourth picker, a long device
+       name, and a host narrower than this one. */
+    flex-wrap: wrap;
+  }
+
+  /* Sized to their content instead of splitting the row into equal tracks - stretched
+     thirds left each trigger about 40% wider than the text it carries. The cap is what
+     keeps one verbose device name from taking the row to itself. */
+  .picker {
+    width: auto;
+    max-width: 10rem;
+  }
+}
+
+.picker {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  height: 2.5rem;
+  padding: 0 0.5rem 0 0.75rem;
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: var(--mat-sys-corner-medium);
+  background: var(--mat-sys-surface-container);
+  color: var(--mat-sys-on-surface);
+  text-align: left;
+
+  cursor: pointer;
+  font: inherit;
+
+  &:hover:not(:disabled) {
+    border-color: var(--mat-sys-outline);
+    background: var(--mat-sys-surface-container-high);
+  }
+
+  /* Material's ripple and focus ring come with `matButton`, which this is not - so the
+     keyboard state is drawn here rather than left missing. */
+  &:focus-visible {
+    outline: 2px solid var(--mat-sys-primary);
+    outline-offset: 2px;
+  }
+
+  &__icon,
+  &__chevron {
+    flex: none;
+    width: 1.125rem;
+    height: 1.125rem;
+    font-size: 1.125rem;
     color: var(--mat-sys-on-surface-variant);
   }
 
-  &__options {
-    display: flex;
-    gap: 0.5rem;
+  &__chevron {
+    margin-left: auto;
   }
 
-  &__option {
-    border: 1px solid var(--mat-sys-outline-variant);
-
-    &--active {
-      border-color: var(--mat-sys-primary);
-      background: var(--mat-sys-primary-container);
-      color: var(--mat-sys-on-primary-container);
-    }
-  }
-
-  &__warn {
-    margin: 0;
+  /* The device name is the only part that can outgrow its track, so it is the only part
+     that truncates - the icon and chevron keep their size and the row never wraps. */
+  &__name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     font: var(--mat-sys-body-small);
-    color: var(--mat-sys-error);
   }
+}
+
+.warn {
+  margin: 0;
+  font: var(--mat-sys-body-small);
+  color: var(--mat-sys-error);
 }
