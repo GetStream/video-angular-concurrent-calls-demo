@@ -10,16 +10,16 @@
  */
 @mixin icon-control {
   .ctl {
-    background: #2b2f34;
-    --mat-icon-button-icon-color: #e6e8ea;
+    background: var(--mat-sys-surface-container-high);
+    --mat-icon-button-icon-color: var(--mat-sys-on-surface);
 
     &--off {
-      background: #b3403f;
+      background: var(--app-error-strong);
       --mat-icon-button-icon-color: #fff;
     }
 
     &--active {
-      background: #2f6fd0;
+      background: var(--app-primary-strong);
       --mat-icon-button-icon-color: #fff;
     }
   }

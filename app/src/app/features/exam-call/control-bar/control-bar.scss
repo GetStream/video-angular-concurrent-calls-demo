@@ -11,14 +11,14 @@
   align-items: center;
   gap: 1rem;
   padding: 0.625rem 1rem;
-  border-top: 1px solid #2f3339;
+  border-top: 1px solid var(--mat-sys-outline-variant);
 
   &__timer {
     display: inline-flex;
     align-items: center;
     gap: 0.3rem;
     min-width: 5rem;
-    color: #b6bbc2;
+    color: var(--mat-sys-on-surface-variant);
     font-variant-numeric: tabular-nums;
     font: var(--mat-sys-label-large);
 
@@ -44,7 +44,7 @@
   }
 
   &__danger {
-    --mat-button-filled-container-color: #b3403f;
+    --mat-button-filled-container-color: var(--app-error-strong);
     --mat-button-filled-label-text-color: #fff;
     --mat-button-filled-icon-color: #fff;
   }
@@ -53,8 +53,8 @@
 @include icon-control;
 
 .ctl-wide {
-  --mat-button-text-label-text-color: #e6e8ea;
-  border: 1px solid #4a5058;
+  --mat-button-text-label-text-color: var(--mat-sys-on-surface);
+  border: 1px solid var(--mat-sys-outline);
 
   /* Filled, not just re-tinted: this is an "you are currently doing this" state, and the
      wireframe draws it as a solid pill. A border-only variant is easy to miss - and while

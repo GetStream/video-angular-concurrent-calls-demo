@@ -14,14 +14,11 @@ export interface SettingsDialogData {
 /**
  * Device settings, mid-call.
  *
- * Deliberately a `MatDialog` rather than a hand-rolled overlay like the whisper panel, and
- * deliberately on the app's normal (light) surface rather than restyled to match the dark
- * call UI. The reason is the pickers: `mat-select` renders its panel in a CDK overlay
- * attached to the body, outside this component's DOM, so it takes the *application* theme
- * whatever the dialog looks like. Darkening the dialog by hand would leave every dropdown
- * it opens light - a fight that can only be won with global CSS reaching into Material
- * internals. A settings sheet floating over the call reads as a system surface, which is
- * what it is, and every control inside it is themed correctly for free.
+ * A `MatDialog` rather than a hand-rolled overlay like the whisper panel, and it needs no
+ * theming of its own. `mat-select` renders its panel in a CDK overlay attached to the body,
+ * outside this component's DOM, so a dropdown always takes the *application* theme rather
+ * than the dialog's - which is only workable because the application theme is the call
+ * palette. The dialog, its pickers and their panels all resolve from the same tokens.
  *
  * There is no camera preview here, unlike the lobby: in a call your own tile is already on
  * screen, so a second copy of your face would only take up room.

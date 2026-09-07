@@ -12,12 +12,12 @@
   height: 100%;
   border-radius: 0.5rem;
   overflow: hidden;
-  background: #23262b;
-  border: 1px solid #2f3339;
+  background: var(--mat-sys-surface-container);
+  border: 1px solid var(--mat-sys-outline-variant);
 
   &--alert {
-    border-color: #d05353;
-    background: color-mix(in srgb, #d05353 14%, #23262b);
+    border-color: var(--app-error-strong);
+    background: color-mix(in srgb, var(--app-error-strong) 14%, var(--mat-sys-surface-container));
   }
 
   &__video {
@@ -45,7 +45,7 @@
     align-items: center;
     justify-content: center;
     gap: 0.375rem;
-    color: #9aa1a9;
+    color: var(--app-on-surface-dim);
     font: var(--mat-sys-label-medium);
 
     mat-icon {
@@ -56,7 +56,7 @@
   }
 
   &--alert &__placeholder {
-    color: #f0b3b3;
+    color: var(--mat-sys-error);
   }
 
   &__avatar {
@@ -66,8 +66,8 @@
     width: 2.5rem;
     height: 2.5rem;
     border-radius: 50%;
-    background: #33373d;
-    color: #e6e8ea;
+    background: var(--mat-sys-surface-container-highest);
+    color: var(--mat-sys-on-surface);
     font-weight: 700;
   }
 
@@ -93,18 +93,18 @@
 
     /* Muted is the state a proctor needs to spot, so it is the one that gets colour. */
     &--off {
-      background: #b3403f;
+      background: var(--app-error-strong);
     }
 
     &--speaking {
-      background: #2f6fd0;
+      background: var(--app-primary-strong);
       box-shadow: 0 0 0 2px rgb(76 139 245 / 0.45);
     }
 
     /* Amber, not red: the participant thinks they are unmuted, which is a different
        problem from being muted and needs to read as a different state. */
     &--interrupted {
-      background: #9a7420;
+      background: var(--app-warning-strong);
     }
   }
 
@@ -130,7 +130,7 @@
     padding: 0.1rem 0.4rem;
     border-radius: 0.25rem;
     background: rgb(0 0 0 / 0.7);
-    color: #e0c26f;
+    color: var(--app-warning);
     font: var(--mat-sys-label-small);
 
     mat-icon {

@@ -50,13 +50,13 @@ const CAPTION_SETTINGS = { visibilityDurationMs: 2700, maxVisibleCaptions: 2 };
 
     .captions__line {
       margin: 0;
-      color: #f2f3f5;
+      color: var(--mat-sys-on-surface);
       font: var(--mat-sys-body-medium);
       text-wrap: balance;
     }
 
     .captions__who {
-      color: #a8c7fa;
+      color: var(--mat-sys-primary);
       font-weight: 700;
     }
   `,

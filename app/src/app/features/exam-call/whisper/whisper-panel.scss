@@ -23,10 +23,10 @@
   flex-direction: column;
   gap: 1rem;
   padding: 1.5rem;
-  border: 1px solid #3d434b;
+  border: 1px solid var(--mat-sys-outline-variant);
   border-radius: 0.75rem;
-  background: #1e2126;
-  color: #f2f3f5;
+  background: var(--mat-sys-surface-container-low);
+  color: var(--mat-sys-on-surface);
   box-shadow: 0 1.5rem 3rem rgb(0 0 0 / 45%);
 
   &__head {
@@ -55,7 +55,7 @@
   &__lede {
     margin: 0;
     font: var(--mat-sys-body-medium);
-    color: #d6d9dd;
+    color: var(--mat-sys-on-surface);
   }
 
   &__actions {
@@ -63,7 +63,7 @@
     align-items: center;
     gap: 0.75rem;
     padding-top: 0.75rem;
-    border-top: 1px solid #333940;
+    border-top: 1px solid var(--mat-sys-surface-container-highest);
   }
 
   &__back {
@@ -72,7 +72,7 @@
 
   &__note {
     margin: 0;
-    color: #8d949c;
+    color: var(--app-on-surface-dim);
     font: var(--mat-sys-label-medium);
   }
 }
@@ -92,15 +92,15 @@
 }
 
 .live {
-  border: 1px solid #d05353;
+  border: 1px solid var(--app-error-strong);
   background: rgb(208 83 83 / 18%);
-  color: #ffd9d9;
+  color: var(--mat-sys-on-error-container);
   letter-spacing: 0.06em;
 }
 
 .muted {
-  border: 1px solid #3d434b;
-  color: #b6bbc2;
+  border: 1px solid var(--mat-sys-outline-variant);
+  color: var(--mat-sys-on-surface-variant);
   font-weight: 400;
   letter-spacing: normal;
 }
@@ -115,7 +115,7 @@
     align-items: center;
     gap: 0.5rem;
     padding: 0.25rem 0.625rem 0.25rem 0.25rem;
-    border: 1px solid #3d434b;
+    border: 1px solid var(--mat-sys-outline-variant);
     border-radius: 999px;
     font: var(--mat-sys-label-large);
 
@@ -126,7 +126,7 @@
     }
 
     &--muted {
-      color: #8d949c;
+      color: var(--app-on-surface-dim);
     }
   }
 
@@ -137,7 +137,7 @@
     width: 1.75rem;
     height: 1.75rem;
     border-radius: 50%;
-    background: #333940;
+    background: var(--mat-sys-surface-container-highest);
     font: var(--mat-sys-label-small);
     font-weight: 700;
   }
@@ -149,7 +149,7 @@
   }
 
   &__empty {
-    color: #8d949c;
+    color: var(--app-on-surface-dim);
     font: var(--mat-sys-body-small);
   }
 }

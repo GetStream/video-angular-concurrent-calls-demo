@@ -27,17 +27,17 @@ const OK_MS = 400;
     }
 
     .rtt {
-      color: #8d949c;
+      color: var(--app-on-surface-dim);
       font: var(--mat-sys-label-small);
       font-variant-numeric: tabular-nums;
     }
 
     .rtt--ok {
-      color: #e0c26f;
+      color: var(--app-warning);
     }
 
     .rtt--bad {
-      color: #f0b3b3;
+      color: var(--mat-sys-error);
     }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,

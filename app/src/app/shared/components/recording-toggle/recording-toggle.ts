@@ -66,7 +66,7 @@ const SETTLE_TIMEOUT_MS = 20_000;
     }
 
     .ctl--live {
-      --mat-icon-button-icon-color: #f0b3b3;
+      --mat-icon-button-icon-color: var(--mat-sys-error);
 
       background: rgb(208 83 83 / 22%);
     }

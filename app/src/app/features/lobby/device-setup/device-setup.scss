@@ -42,9 +42,19 @@
     }
   }
 
+  /**
+   * A notice, not a wall of colour. `error-container` is sized for the thin banners on the
+   * call screens; across a whole preview it reads as a fault in the app rather than a
+   * permission the user can grant. The red is carried by the icon, the text and one edge.
+   */
   &__blocked {
-    background: color-mix(in srgb, var(--mat-sys-error-container) 92%, transparent);
-    color: var(--mat-sys-on-error-container);
+    background: var(--mat-sys-surface-container-low);
+    border: 1px solid var(--mat-sys-error);
+    color: var(--mat-sys-on-surface-variant);
+
+    mat-icon {
+      color: var(--mat-sys-error);
+    }
 
     p {
       margin: 0;
@@ -108,7 +118,7 @@
 
 .toggle {
   background: rgb(255 255 255 / 0.92);
-  --mat-icon-button-icon-color: #1a1c1e;
+  --mat-icon-button-icon-color: var(--mat-sys-on-primary);
 
   &--off {
     background: var(--mat-sys-error);

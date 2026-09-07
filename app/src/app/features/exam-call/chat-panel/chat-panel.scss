@@ -9,7 +9,7 @@
   flex-direction: column;
   height: 100%;
   min-height: 0;
-  border-left: 1px solid #2f3339;
+  border-left: 1px solid var(--mat-sys-outline-variant);
 
   &__head {
     display: flex;
@@ -17,13 +17,13 @@
     gap: 0.5rem;
     flex: none;
     padding: 0.625rem 0.75rem;
-    border-bottom: 1px solid #2f3339;
+    border-bottom: 1px solid var(--mat-sys-outline-variant);
 
     mat-icon {
       width: 1.125rem;
       height: 1.125rem;
       font-size: 1.125rem;
-      color: #b6bbc2;
+      color: var(--mat-sys-on-surface-variant);
     }
   }
 
@@ -33,7 +33,7 @@
 
   &__hint {
     margin-left: auto;
-    color: #8d949c;
+    color: var(--app-on-surface-dim);
     font: var(--mat-sys-label-small);
   }
 
@@ -62,7 +62,7 @@
     gap: 0.5rem;
     padding: 1rem;
     text-align: center;
-    color: #b6bbc2;
+    color: var(--mat-sys-on-surface-variant);
     font: var(--mat-sys-body-small);
 
     p {

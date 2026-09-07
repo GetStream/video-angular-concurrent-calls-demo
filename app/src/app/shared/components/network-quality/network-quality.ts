@@ -51,7 +51,7 @@ const LABELS: Record<SfuModels.ConnectionQuality, string> = {
       i {
         width: 3px;
         border-radius: 1px;
-        background: #4a5058;
+        background: var(--mat-sys-outline);
 
         &:nth-child(1) {
           height: 40%;
@@ -68,19 +68,19 @@ const LABELS: Record<SfuModels.ConnectionQuality, string> = {
     }
 
     .bars--poor i:nth-child(1) {
-      background: #e08a8a;
+      background: var(--mat-sys-error);
     }
 
     .bars--good i:nth-child(-n + 2) {
-      background: #e0c26f;
+      background: var(--app-warning);
     }
 
     .bars--excellent i {
-      background: #7fc98a;
+      background: var(--app-success);
     }
 
     .warn {
-      color: #f0b3b3;
+      color: var(--mat-sys-error);
       font: var(--mat-sys-label-small);
       font-weight: 700;
     }

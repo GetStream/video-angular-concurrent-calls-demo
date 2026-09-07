@@ -23,11 +23,66 @@ html {
   );
 }
 
+/**
+ * The call screens' palette, as Material system tokens.
+ *
+ * A call UI is dark - video reads against it and nothing else does - so the app commits to
+ * dark rather than following the system, and the greys are the ones the call screens were
+ * drawn with. `mat.theme()` emits every token as `light-dark(light, dark)`; these are flat
+ * overrides, because there is no light scheme to keep a second value for.
+ *
+ * Only the grey ladder is overridden. Material's generated dark values for `primary`
+ * (#abc7ff), `error` (#ffb4ab) and `on-error-container` (#ffdad6) already land where the
+ * call screens put them, so they are left alone. What clashes is neutrals: M3's dark
+ * `on-surface-variant` is a near-white #e0e2ec, where a call needs secondary text to sit
+ * back off the video.
+ */
+:root {
+  --mat-sys-surface: #16181b;
+  --mat-sys-surface-container-lowest: #121316;
+  --mat-sys-surface-container-low: #1e2126;
+  --mat-sys-surface-container: #23262b;
+  --mat-sys-surface-container-high: #2a2d33;
+  --mat-sys-surface-container-highest: #333940;
+  --mat-sys-on-surface: #f2f3f5;
+  --mat-sys-on-surface-variant: #b6bbc2;
+  --mat-sys-outline: #4a5058;
+  --mat-sys-outline-variant: #3d434b;
+  --mat-sys-error-container: #4a2626;
+
+  // Selection reads as emphasis, not a block of colour. M3 generates #00458f here, which
+  // is the loudest thing on a screen whose accent is otherwise spent on small controls.
+  --mat-sys-primary-container: #22344d;
+  --mat-sys-on-primary-container: #cfe0ff;
+
+  /**
+   * Roles M3 has no slot for.
+   *
+   * `primary` is a *light* tone in a dark scheme - correct as a foreground, which is how the
+   * captions and active nav use it, but Material also fills buttons with it. The control bar
+   * instead puts white on a mid blue, so `--app-primary-strong` is that mid blue and the
+   * filled-button tokens below point at it. `-strong` throughout means "a saturated fill
+   * that carries white", as against the `-container` roles, which are dark grounds.
+   */
+  --app-primary-strong: #2f6fd0;
+  --app-on-surface-dim: #8d949c;
+  --app-error-strong: #d05353;
+  --app-warning: #e0c26f;
+  --app-warning-strong: #9a7420;
+  --app-warning-container: #3d3320;
+  --app-on-warning-container: #f7e5bf;
+  --app-success: #7fc98a;
+
+  // Filled buttons, matched to the control bar's active pill. Set here rather than per
+  // component so the lobby's CTA and the in-call controls cannot drift; a destructive
+  // button still overrides these on itself, which wins over `:root`.
+  --mat-button-filled-container-color: var(--app-primary-strong);
+  --mat-button-filled-label-text-color: #fff;
+  --mat-button-filled-icon-color: #fff;
+}
+
 body {
-  // Default the application to a light color theme. This can be changed to
-  // `dark` to enable the dark color theme, or to `light dark` to defer to the
-  // user's system settings.
-  color-scheme: light;
+  color-scheme: dark;
 
   // Set a default background, font and text colors for the application using
   // Angular Material's system-level CSS variables. Learn more about these

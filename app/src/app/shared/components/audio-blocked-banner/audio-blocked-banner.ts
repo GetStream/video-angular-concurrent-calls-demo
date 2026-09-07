@@ -35,8 +35,8 @@ import { MatIconModule } from '@angular/material/icon';
       gap: 0.5rem;
       flex: none;
       padding: 0.4rem 1rem;
-      background: #3d3320;
-      color: #f7e5bf;
+      background: var(--app-warning-container);
+      color: var(--app-on-warning-container);
       font: var(--mat-sys-label-large);
     }
 

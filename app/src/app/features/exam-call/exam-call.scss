@@ -3,8 +3,8 @@
   height: 100vh;
   /* The call screens are the one place this demo goes dark: it keeps the video the
      brightest thing on screen, which is what a proctor is actually looking at. */
-  background: #16181b;
-  color: #f2f3f5;
+  background: var(--mat-sys-surface);
+  color: var(--mat-sys-on-surface);
 }
 
 .call {
@@ -39,7 +39,7 @@
     p {
       margin: 0;
       max-width: 30rem;
-      color: #b6bbc2;
+      color: var(--mat-sys-on-surface-variant);
       font: var(--mat-sys-body-medium);
     }
 
@@ -52,7 +52,7 @@
       width: 2.5rem;
       height: 2.5rem;
       font-size: 2.5rem;
-      color: #b6bbc2;
+      color: var(--mat-sys-on-surface-variant);
     }
   }
 }
@@ -86,9 +86,9 @@ app-chat-panel {
     align-items: center;
     gap: 0.875rem;
     padding: 1.75rem;
-    border: 1px solid #d05353;
+    border: 1px solid var(--app-error-strong);
     border-radius: 0.75rem;
-    background: #1e2126;
+    background: var(--mat-sys-surface-container-low);
     text-align: center;
 
     h2 {
@@ -98,7 +98,7 @@ app-chat-panel {
 
     p {
       margin: 0;
-      color: #b6bbc2;
+      color: var(--mat-sys-on-surface-variant);
       font: var(--mat-sys-body-medium);
     }
   }
@@ -107,7 +107,7 @@ app-chat-panel {
     width: 2.5rem;
     height: 2.5rem;
     font-size: 2.5rem;
-    color: #f0b3b3;
+    color: var(--mat-sys-error);
   }
 
   &__actions {

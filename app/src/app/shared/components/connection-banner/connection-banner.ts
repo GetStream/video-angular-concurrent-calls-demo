@@ -44,19 +44,19 @@ import { CallingState } from '@stream-io/video-client';
       gap: 0.5rem;
       flex: none;
       padding: 0.4rem 1rem;
-      background: #2a2d33;
-      color: #e6e8ea;
+      background: var(--mat-sys-surface-container-high);
+      color: var(--mat-sys-on-surface);
       font: var(--mat-sys-label-large);
     }
 
     .banner--fatal {
-      background: #4a2626;
-      color: #ffd9d9;
+      background: var(--mat-sys-error-container);
+      color: var(--mat-sys-on-error-container);
     }
 
     .banner__action {
       margin-left: auto;
-      --mat-button-text-label-text-color: #ffd9d9;
+      --mat-button-text-label-text-color: var(--mat-sys-on-error-container);
     }
 
     mat-icon {

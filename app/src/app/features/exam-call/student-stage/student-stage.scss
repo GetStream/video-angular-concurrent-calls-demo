@@ -26,7 +26,7 @@
   }
 
   &__id {
-    color: #9aa1a9;
+    color: var(--app-on-surface-dim);
     font-size: 0.8125rem;
   }
 
@@ -41,7 +41,7 @@
     display: inline-flex;
     align-items: center;
     gap: 0.3rem;
-    color: #b6bbc2;
+    color: var(--mat-sys-on-surface-variant);
     font: var(--mat-sys-label-medium);
 
     mat-icon {
@@ -62,9 +62,9 @@
 
 .badge {
   padding: 0.1rem 0.45rem;
-  border: 1px solid #4a5058;
+  border: 1px solid var(--mat-sys-outline);
   border-radius: 999px;
-  color: #b6bbc2;
+  color: var(--mat-sys-on-surface-variant);
   font: var(--mat-sys-label-small);
   font-weight: 700;
   letter-spacing: 0.06em;
@@ -82,7 +82,7 @@
     font: var(--mat-sys-label-medium);
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    color: #8d949c;
+    color: var(--app-on-surface-dim);
   }
 
   &__body {
@@ -110,7 +110,7 @@
   justify-content: center;
   gap: 0.625rem;
   padding: 1.5rem;
-  border: 1px dashed #4a5058;
+  border: 1px dashed var(--mat-sys-outline);
   border-radius: 0.5rem;
   text-align: center;
 
@@ -122,7 +122,7 @@
   p {
     margin: 0;
     max-width: 26rem;
-    color: #b6bbc2;
+    color: var(--mat-sys-on-surface-variant);
     font: var(--mat-sys-body-medium);
   }
 
@@ -130,7 +130,7 @@
     width: 2rem;
     height: 2rem;
     font-size: 2rem;
-    color: #8d949c;
+    color: var(--app-on-surface-dim);
   }
 }
 
