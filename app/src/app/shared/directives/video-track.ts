@@ -17,6 +17,12 @@ export class VideoTrack {
   readonly call = input.required<Call>();
   readonly sessionId = input.required<string>();
   readonly trackType = input<VideoTrackType>('videoTrack');
+  /**
+   * Report visibility to the SFU. Off where tracking cannot work - outside a viewport root,
+   * or for the local participant, whose result `bindVideoElement` discards - so those cases
+   * are stated rather than left looking tracked.
+   */
+  readonly trackVisibility = input(true);
 
   private readonly element = inject<ElementRef<HTMLVideoElement>>(ElementRef);
   private teardown: (() => void)[] = [];
@@ -34,10 +40,13 @@ export class VideoTrack {
       const sessionId = this.sessionId();
       const trackType = this.trackType();
 
-      // Both return undefined under SSR; harmless here since the app is browser-only.
+      // Both return undefined under SSR, and `bindVideoElement` also does for a session not
+      // yet in call state - drive this from an @for over live participants and it cannot.
       this.teardown = [
         call.bindVideoElement(video, sessionId, trackType),
-        call.trackElementVisibility(video, sessionId, trackType),
+        this.trackVisibility()
+          ? call.trackElementVisibility(video, sessionId, trackType)
+          : undefined,
       ].filter((fn): fn is () => void => typeof fn === 'function');
 
       onCleanup(() => this.release());

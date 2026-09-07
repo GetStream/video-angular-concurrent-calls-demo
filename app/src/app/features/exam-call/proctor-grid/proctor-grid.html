@@ -1,4 +1,8 @@
-<div class="grid">
+<!-- The viewport goes on the element that contains every tracked tile, not on a scroller:
+     `ViewportTracker.observe()` skips anything the root does not `contains()` and still
+     returns a cleanup function, so a tile outside it looks tracked and is not. Both
+     `.students` and `.proctors__row` scroll, and the observer clips against each in turn. -->
+<div class="grid" appCallViewport [call]="exam().call">
   <header class="grid__head">
     <span class="grid__title">Exam call</span>
     <code class="grid__id">{{ callId() }}</code>
@@ -35,9 +39,7 @@
     </button>
   </header>
 
-  <!-- The viewport is what lets tracks scrolled out of view be unsubscribed, and what
-       stops the sort from reshuffling tiles the proctor is currently looking at. -->
-  <div class="students" appCallViewport [call]="exam().call">
+  <div class="students">
     @for (student of students(); track student.sessionId) {
       <div class="student">
         <div class="student__camera">

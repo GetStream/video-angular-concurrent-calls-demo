@@ -16,9 +16,6 @@ import { NetworkQuality } from '../../../shared/components/network-quality/netwo
 import { ParticipantTile } from '../../../shared/components/participant-tile/participant-tile';
 import { RecordingBadge } from '../../../shared/components/recording-badge/recording-badge';
 
-/** Small camera tiles never need more than this; the screen shares are left uncapped. */
-const CAMERA_RESOLUTION = { width: 320, height: 240 };
-
 /**
  * What a proctor sees: the students are the content.
  *
@@ -64,21 +61,14 @@ export class ProctorGrid {
   );
 
   constructor() {
-    effect(() => {
-      const exam = this.exam();
-
-      // Students first, then alphabetical. Without a stable comparator the columns
-      // reshuffle under the proctor's cursor every time someone starts speaking.
-      exam.call.setSortParticipantsBy(combineComparators(byRole('call_member_student'), byName));
-    });
-
-    // Ask the SFU for small layers on the camera tiles only. The screen shares are where
-    // detail actually matters, so they keep whatever the element size implies.
-    effect(() => {
-      const exam = this.exam();
-      const cameraSessions = this.students().map((p) => p.sessionId);
-      if (!cameraSessions.length) return;
-      exam.call.setPreferredIncomingVideoResolution(CAMERA_RESOLUTION, cameraSessions);
+    // Students first, then alphabetical. Without a stable comparator the columns reshuffle
+    // under the proctor's cursor every time someone starts speaking. Restored on teardown:
+    // the sort belongs to the `Call`, which outlives this component.
+    effect((onCleanup) => {
+      const call = this.exam().call;
+      const previous = call.getSortParticipantsBy();
+      call.setSortParticipantsBy(combineComparators(byRole('call_member_student'), byName));
+      onCleanup(() => call.setSortParticipantsBy(previous));
     });
   }
 

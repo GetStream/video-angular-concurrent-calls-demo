@@ -333,12 +333,31 @@ template reads — device lists, `browserPermissionState$`, device status — go
 
 Two details inside the facade that are load-bearing rather than tidy:
 
-- **`distinctUntilChanged()` before every `toSignal`.** The client throttles nothing, and
-  `audioLevelChanged` patches every participant's audio level on every event. Filtering here means
-  a frame that changes nothing writes no signal and marks no component dirty.
-- **`callStatsReport$` is subscribed unconditionally.** The SDK's stats poller short-circuits
-  unless something is observing it, so a lazily-subscribed latency badge would silently read zero
-  forever.
+- **`distinctUntilChanged()` before every `toSignal`, with the comparator chosen per stream.**
+  The client throttles nothing, and `audioLevelChanged` patches every participant's audio level on
+  every event. The bare form compares with `===`, which filters the scalars only: the store rebuilds
+  every collection on each patch, so `participants$` and its neighbours emit a fresh array reference
+  each time. `ownCapabilities$`, `members$` and `closedCaptions$` take an element-wise comparator,
+  which is what stops `can()` invalidating several times a second for a value that changes once a
+  call. `participants$` takes none — `audioLevel` and `isSpeaking` really do change per event, so
+  **project to the scalar you need and dedupe _that_**, which is what `derive()` is for and why
+  `latencyMs` and `connectionQuality` are built with it. The rule holds outside the facade too:
+  anything feeding an `effect()` off `participants()` needs a value-based identity.
+- **Nothing calls `setPreferredIncomingVideoResolution`.** Reaching for it to cap the small camera
+  tiles is the obvious move and the wrong one: its dimension _replaces_ the measured one
+  (`override?.dimension ?? p.videoDimension`) rather than capping it, so a fixed number competes
+  with what `bindVideoElement` already measures — and a 304×176 tile asking for 320×240 requests a
+  higher layer than it can display. It is also a second source of truth for a size the CSS owns.
+  Leave dynascale alone and it tracks the element, including down to nothing when a column scrolls
+  out of the viewport. The API is for a deliberate, user-driven quality cap, and it is set-once:
+  it ends in `apply()`, which clears and reschedules the single 1200 ms debounce every
+  track-subscription update waits on, so driving it from an `effect()` starves that queue.
+- **The latency badge is what keeps the stats poller alive.** The SDK's collection loop runs every
+  2 s but skips the work unless `callStatsReport$` has an observer — its own comment calls stats
+  expensive — so a lazily-subscribed badge reads zero forever. `toSignal` subscribes eagerly, so
+  `latencyMs` in the facade is enough to hold the stream open. Publisher RTT is the only thing this
+  app reads out of the report, which makes the trade visible: drop the badge and `latencyMs` and
+  the sweep stops. `connectionQuality` is unaffected — it comes from `participants$`.
 
 Capabilities always come from `ownCapabilities$`, never from a cached join response: the observable
 merges the coordinator's list with the SFU's grants.
@@ -352,11 +371,16 @@ seam — [`shared/directives/`](./app/src/app/shared/directives):
 | ------------------- | --------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `[appVideoTrack]`   | `bindVideoElement` + `trackElementVisibility` | `bindVideoElement` also drives dynascale: it observes the element's real size and asks the SFU for a matching layer. That is what makes ten students × two tracks affordable |
 | `[appAudioTrack]`   | `bindAudioElement`                            | audio is subscribed whether or not an element is bound, so _not_ binding gives you a call that looks fine and is silent                                                      |
-| `[appCallViewport]` | `setViewport`                                 | on the scrolling container: unsubscribes off-screen columns, and keeps the sort from reshuffling tiles you are looking at                                                    |
+| `[appCallViewport]` | `setViewport`                                 | goes on the element that **contains** every tracked tile, not on a scroller: `observe()` skips anything the root does not `contains()` and still returns a cleanup function, so a tile outside it looks tracked and is not |
 
 Remote audio lives in a **permanently mounted, visually hidden** `<app-audio-sink>` rather than
 inside each tile: audio has to keep playing for people with no tile on screen, and a
-conditionally-rendered element drops the first moment of speech every time it appears.
+conditionally-rendered host drops the first moment of speech every time it appears — which is also
+why the whisper sink sits outside `panelOpen()`. The `<audio>` elements inside it follow `hasAudio`
+/ `hasScreenShareAudio`, as `ParticipantsAudio` does in the React SDK: each binding opens three
+subscriptions over `participants$`, so an element per muted participant is per-frame work for
+nothing. `hasAudio` reads `publishedTracks`, signalled before media flows, so the element is in
+place ahead of the first sample.
 
 ### The lobby never joins a call
 
@@ -467,7 +491,8 @@ every SFU frame ends in an `ApplicationRef.tick()`. That tick is cheap because o
 
 1. Every component is OnPush — the CLI default, so it costs nothing to hold to. A tick with no
    dirty component is a tree walk with no template work.
-2. The `distinctUntilChanged` filtering above, so frames that change nothing dirty nothing.
+2. The `distinctUntilChanged` filtering above, on the streams where a comparator makes it true.
+   The participant streams emit per frame, so what they feed is projected to scalars.
 
 `runOutsideAngular` would be actively harmful in a reference app: outside the zone, a bare
 `.subscribe()` into a field goes silently stale, which is precisely the pattern to discourage.
@@ -504,6 +529,28 @@ Both are created together in the lobby, so their rosters cannot drift, and stude
 members of the second one. Nothing is stored in either call's `custom` data — the call _type_ is what
 tells them apart, so a `mode` field would carry no information, and `getOrCreate` overwrites custom
 data on an existing call, so writing one would also be a small hazard.
+
+```text
+┌──────────────────────────────────────────┐          ┌──────────────────────────────────────────┐
+│ EXAM CALL                                │          │ WHISPER CHANNEL                          │
+│ default:spry-otter-42                    │          │ audio_room:spry-otter-42                 │
+├──────────────────────────────────────────┤          ├──────────────────────────────────────────┤
+│ students · call_member_student           │          │ students                                 │
+│   Tom   Ana   Nils   … and seven more    │          │   none, ever — no student role holds     │
+│                                          │          │   join-call on this call type            │
+│                                          │          │                                          │
+│ proctors · call_member_proctor           │          │ proctors · call_member_proctor           │
+│   John                          mic held │  ──────  │   John                          MIC LIVE │
+│   Maya                          mic held │  ──────  │   Maya                         listening │
+│                                          │          │                                          │
+│ speaker ducked to 20%                    │          │ recording auto-on, audio only            │
+└──────────────────────────────────────────┘          └──────────────────────────────────────────┘
+```
+
+The tie between them is identity, not flow: one proctor, two `Call` instances. In this frame John
+has pressed _Whisper_ and Maya has pressed nothing — both are held shut in the exam call, and only
+John is audible to the other proctors. The empty student slot on the right is the access control,
+and it is a server-side refusal rather than a hidden button.
 
 **Mode is global to the call, not per-user.** One proctor pressing _Whisper_ puts every proctor into
 the channel; one proctor pressing _Go back to students_ takes every proctor out and mutes every

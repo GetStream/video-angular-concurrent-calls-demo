@@ -11,6 +11,7 @@
     [call]="call()"
     [sessionId]="participant().sessionId"
     [trackType]="trackType()"
+    [trackVisibility]="!participant().isLocalParticipant"
   ></video>
 
   @if (!hasTrack()) {

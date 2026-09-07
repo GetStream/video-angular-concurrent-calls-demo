@@ -6,7 +6,6 @@ import {
   type Call,
   type CallClosedCaption,
   type CallSessionResponse,
-  type CallStatsReport,
   type MemberResponse,
   type OwnCapability,
   type StreamVideoParticipant,
@@ -80,11 +79,11 @@ export class CallFacade {
 
   // --- stats --------------------------------------------------------------------------
   /**
-   * Subscribed unconditionally on purpose: the SDK's stats poller short-circuits unless
-   * something is observing this, so a lazily-subscribed latency badge would silently
-   * always read zero.
+   * Publisher round-trip time, and the only thing this app reads out of the stats report.
+   * Its `toSignal` subscription is what keeps the SDK's 2s stats sweep running: the loop
+   * skips the work unless `callStatsReport$` has an observer. Drop this and the badge, and
+   * the sweep stops - `connectionQuality` is unaffected, it comes from `participants$`.
    */
-  readonly statsReport: Signal<CallStatsReport | undefined>;
   readonly latencyMs: Signal<number>;
   /**
    * The SFU's own verdict on *our* connection. Derived rather than read off
@@ -111,22 +110,21 @@ export class CallFacade {
     this.hasOngoingScreenShare = this.sig(state.hasOngoingScreenShare$, false);
 
     this.callingState = this.sig(state.callingState$, CallingState.IDLE);
-    this.members = this.sig(state.members$, []);
+    this.members = this.sig(state.members$, [], sameItems);
     this.session = this.sig(state.session$, undefined);
     this.backstage = this.sig(state.backstage$, true);
 
-    this.ownCapabilities = this.sig(state.ownCapabilities$, []);
+    this.ownCapabilities = this.sig(state.ownCapabilities$, [], sameItems);
 
     this.recording = this.sig(state.recording$, false);
     this.captioning = this.sig(state.captioning$, false);
-    this.closedCaptions = this.sig(state.closedCaptions$, []);
+    this.closedCaptions = this.sig(state.closedCaptions$, [], sameItems);
     this.audioBlocked = this.sig(call.blockedAudioTracker.autoplayBlocked$, false);
 
     this.micStatus = this.sig(call.microphone.state.optimisticStatus$, undefined);
     this.cameraStatus = this.sig(call.camera.state.optimisticStatus$, undefined);
     this.screenShareStatus = this.sig(call.screenShare.state.status$, undefined);
 
-    this.statsReport = this.sig(state.callStatsReport$, undefined);
     this.latencyMs = this.derive(
       state.callStatsReport$,
       (report) => report?.publisherStats?.averageRoundTripTimeInMs ?? 0,
@@ -150,13 +148,21 @@ export class CallFacade {
   }
 
   /**
-   * `distinctUntilChanged` before every `toSignal` is load-bearing, not tidiness: the SDK
-   * throttles nothing, and `audioLevelChanged` patches every participant's audio level on
-   * each event. Filtering here means a frame that changes nothing writes no signal and
-   * marks no component dirty, which is what keeps zone.js's per-frame ticks cheap.
+   * The comparator belongs to the stream, so it is passed in rather than assumed.
+   *
+   * Bare `distinctUntilChanged()` compares with `===`, which filters the scalars only: the
+   * store rebuilds every collection on each patch, so `participants$` and its neighbours
+   * emit a fresh array reference every time. `sameItems` earns its keep on the collections
+   * whose contents hold still. `participants$` takes no comparator - `audioLevel` and
+   * `isSpeaking` really do change per event, so project to the scalar you need and dedupe
+   * that with `derive()` instead.
    */
-  private sig<T>(source: Observable<T>, initialValue: T): Signal<T> {
-    return toSignal(source.pipe(distinctUntilChanged()), {
+  private sig<T>(
+    source: Observable<T>,
+    initialValue: T,
+    compare?: (a: T, b: T) => boolean,
+  ): Signal<T> {
+    return toSignal(source.pipe(distinctUntilChanged(compare)), {
       injector: this.injector,
       initialValue,
     });
@@ -172,4 +178,12 @@ export class CallFacade {
       initialValue,
     });
   }
+}
+
+/**
+ * Element-wise `===`, for short collections whose contents rarely change. Not a deep
+ * compare: against `participants$` it returns false every time and charges a sweep for it.
+ */
+function sameItems<T>(a: readonly T[], b: readonly T[]): boolean {
+  return a.length === b.length && a.every((item, i) => item === b[i]);
 }
