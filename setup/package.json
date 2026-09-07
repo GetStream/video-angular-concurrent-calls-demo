@@ -9,6 +9,7 @@
   },
   "scripts": {
     "setup": "tsx src/setup.ts",
+    "tokens": "tsx src/tokens.ts",
     "typecheck": "tsc --noEmit",
     "verify": "tsx src/verify.ts"
   },

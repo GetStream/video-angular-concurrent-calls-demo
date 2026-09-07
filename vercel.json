@@ -1,0 +1,6 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "npm --prefix setup install && npm --prefix setup run tokens && npm --prefix app install && npm --prefix app run build",
+  "outputDirectory": "app/dist/app/browser",
+  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+}
